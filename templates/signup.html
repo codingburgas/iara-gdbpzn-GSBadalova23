@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <title>Регистрация - ИАРА</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); width: 360px; border-top: 6px solid #28a745; }
+        h2 { color: #28a745; text-align: center; margin-bottom: 30px; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Регистрация</h2>
+        <form action="{{ url_for('signup') }}" method="POST">
+            <input type="text" name="name" placeholder="Име и фамилия" required>
+            <input type="email" name="email" placeholder="Имейл адрес" required>
+            <input type="password" name="password" placeholder="Парола" required>
+            <button type="submit">Създай профил</button>
+        </form>
+        <a href="{{ url_for('login') }}" style="display:block; text-align:center; margin-top:20px; color:#666; text-decoration:none;">Вече имате профил? Влезте тук.</a>
+    </div>
+</body>
+</html>

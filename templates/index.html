@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <title>ИАРА - Начало</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f0f2f5; display: flex; align-items: center; justify-content: center; height: 100vh; }
+        .hero { text-align: center; background: white; padding: 60px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-top: 10px solid #003366; max-width: 500px; }
+        h1 { color: #003366; margin-bottom: 20px; font-size: 2.5em; }
+        p { color: #555; margin-bottom: 30px; line-height: 1.6; }
+        .btn { display: inline-block; padding: 15px 35px; margin: 10px; text-decoration: none; border-radius: 8px; font-weight: bold; transition: 0.3s; }
+        .btn-login { background: #003366; color: white; }
+        .btn-signup { border: 2px solid #003366; color: #003366; }
+        .btn:hover { opacity: 0.8; transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <h1>ИАРА</h1>
+        <p>Информационна система за управление на рибарството и аквакултурите</p>
+        <a href="{{ url_for('login') }}" class="btn btn-login">Вход</a>
+        <a href="{{ url_for('signup') }}" class="btn btn-signup">Регистрация</a>
+    </div>
+</body>
+</html>
