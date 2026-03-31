@@ -2,46 +2,54 @@
 <html lang="bg">
 <head>
     <meta charset="UTF-8">
-    <title>ИАРА - Административен Панел</title>
+    <title>ИАРА - Администрация</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f4f4f4; }
         .nav { background: #1a1a1a; color: white; padding: 15px 40px; display: flex; justify-content: space-between; }
         .container { max-width: 1200px; margin: auto; padding: 20px; }
-        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 25px; }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background: #eee; color: #333; }
-        .status-ok { color: green; font-weight: bold; }
-        .status-wait { color: orange; font-weight: bold; }
+        th { background: #003366; color: white; }
+        .badge-comp { background: #ff4d4d; color: white; padding: 5px; border-radius: 5px; font-size: 12px; }
+        .badge-social { background: #28a745; color: white; padding: 5px; border-radius: 5px; font-size: 12px; }
     </style>
 </head>
 <body>
     <div class="nav">
-        <h2>🛡️ ИАРА Администрация</h2>
-        <a href="{{ url_for('logout') }}" style="color:white;">Изход</a>
+        <h2>🛡️ ИАРА Административен Контрол</h2>
+        <a href="{{ url_for('logout') }}" style="color:white; text-decoration:none;">Изход</a>
     </div>
 
     <div class="container">
         <div class="card">
-            <h3>📅 Календар на записванията (Билети)</h3>
+            <h3>📅 Всички записвания (Състезания и Социален риболов)</h3>
             <table>
                 <thead>
                     <tr>
-                        <th>Име</th>
-                        <th>Дата</th>
-                        <th>Час</th>
-                        <th>Тип Билет</th>
+                        <th>Категория</th>
+                        <th>Имена</th>
+                        <th>Контакт</th>
+                        <th>Опит/Възраст</th>
+                        <th>Детайли (Дата/Регион)</th>
                         <th>Цена (€)</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for app in appointments %}
+                    {% for b in bookings %}
                     <tr>
-                        <td>{{ app.full_name }}</td>
-                        <td>{{ app.app_date }}</td>
-                        <td>{{ app.app_time }}</td>
-                        <td>{{ app.ticket_type }}</td>
-                        <td>{{ app.price_eur }} €</td>
+                        <td>
+                            {% if b.category == 'Competition' %}
+                                <span class="badge-comp">Състезание</span>
+                            {% else %}
+                                <span class="badge-social">Социален</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ b.full_name }}</td>
+                        <td>{{ b.email }}</td>
+                        <td>{{ b.experience_years }}г. опит / {{ b.age }}г.</td>
+                        <td>{{ b.competition_date or b.preferred_region + ' (' + b.preferred_weekend + ')' }}</td>
+                        <td>{{ b.price_eur }} €</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -49,37 +57,23 @@
         </div>
 
         <div class="card">
-            <h3>📝 Валидация на риболовни дневници</h3>
+            <h3>📝 Регистриран улов по карта</h3>
             <table>
                 <thead>
                     <tr>
-                        <th>Рибар</th>
-                        <th>Водоем</th>
-                        <th>Риба</th>
-                        <th>Количество</th>
-                        <th>Статус</th>
-                        <th>Действие</th>
+                        <th>Рибар ID</th>
+                        <th>Вид риба</th>
+                        <th>Информация за водоема</th>
+                        <th>Дата</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for log in logs %}
                     <tr>
-                        <td>ID: {{ log.user_id }}</td>
-                        <td>{{ log.water_body_type }}</td>
+                        <td>{{ log.user_id }}</td>
                         <td>{{ log.fish_type }}</td>
-                        <td>{{ log.quantity }} кг</td>
-                        <td>
-                            {% if log.is_validated %}
-                                <span class="status-ok">Валидиран</span>
-                            {% else %}
-                                <span class="status-wait">Чака проверка</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if not log.is_validated %}
-                                <a href="{{ url_for('validate_log', log_id=log.id) }}" style="color:blue;">Потвърди</a>
-                            {% endif %}
-                        </td>
+                        <td>{{ log.water_info }}</td>
+                        <td>{{ log.log_date.strftime('%Y-%m-%d %H:%M') }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
