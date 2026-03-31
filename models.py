@@ -3,35 +3,44 @@ from datetime import datetime
 
 db = SQLAlchemy()
 
+
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
     password = db.Column(db.String(100), nullable=False)
-    role = db.Column(db.String(20), default='fisher')
+    # Роля: 'admin' за служители на ИАРА, 'user' за обикновени рибари
+    role = db.Column(db.String(20), default='user')
 
-class Vessel(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    registration_number = db.Column(db.String(20), unique=True)
-    tonnage = db.Column(db.Float)
-    length = db.Column(db.Float)
-    engine_power = db.Column(db.Float)
-    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    # Връзки
+    appointments = db.relationship('Appointment', backref='fisherman', lazy=True)
+    logs = db.relationship('FishingLog', backref='fisherman', lazy=True)
 
-class FishingTicket(db.Model):
+
+class Appointment(db.Model):
+    """ Модел за календара - записване на часове за билети/консултации """
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    ticket_type = db.Column(db.String(20))
-    telk_number = db.Column(db.String(50), nullable=True)
-    price = db.Column(db.Float)
-    issue_date = db.Column(db.DateTime, default=datetime.utcnow)
-    valid_until = db.Column(db.DateTime)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    full_name = db.Column(db.String(100), nullable=False)
+    # Дата и час, избрани от потребителя чрез календара
+    app_date = db.Column(db.Date, nullable=False)
+    app_time = db.Column(db.Time, nullable=False)
+    ticket_type = db.Column(db.String(50))  # 'Annual', 'Monthly', 'Weekly'
+    price_eur = db.Column(db.Float)  # Вече в ЕВРО (€)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
 
 class FishingLog(db.Model):
+    """ Модел за улова с информация за водоема """
     id = db.Column(db.Integer, primary_key=True)
-    vessel_id = db.Column(db.Integer, db.ForeignKey('vessel.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     fish_type = db.Column(db.String(50))
     quantity = db.Column(db.Float)
-    location = db.Column(db.String(100))
+
+    # Информация за мястото (ще се попълва автоматично при клик на картата)
+    water_body_type = db.Column(db.String(50))  # 'River', 'Sea', 'Lake', 'Marsh'
+    location_name = db.Column(db.String(200))
+    lat = db.Column(db.Float)  # Географска ширина
+    lng = db.Column(db.Float)  # Географска дължина
+
     log_date = db.Column(db.DateTime, default=datetime.utcnow)
-    is_inspected = db.Column(db.Boolean, default=False)
+    is_validated = db.Column(db.Boolean, default=False)  # Валидация от Админ
