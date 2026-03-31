@@ -52,7 +52,6 @@ def buy_ticket():
     period = int(request.form.get('period'))
     telk = request.form.get('telk')
 
-    # Логика за цената по казус
     base_price = 40.0
     if u_type == 'disabled':
         price = 0.0
@@ -62,7 +61,7 @@ def buy_ticket():
         price = base_price
 
     new_ticket = FishingTicket(
-        user_id=1, # Симулация на логнат потребител
+        user_id=1,
         ticket_type=u_type,
         telk_number=telk,
         price=price,
