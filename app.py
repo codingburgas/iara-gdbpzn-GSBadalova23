@@ -23,7 +23,7 @@ def signup():
     if request.method == 'POST':
         user_name = request.form.get('username')
         pwd = request.form.get('password')
-        # Първият е админ, следващите са потребители
+        # Първият регистриран е админ, следващите са потребители
         role = 'admin' if User.query.count() == 0 else 'user'
         new_user = User(username=user_name, password=pwd, role=role)
         db.session.add(new_user)
@@ -41,6 +41,7 @@ def login():
             session['user_id'] = user.id
             session['role'] = user.role
             return redirect(url_for('dashboard'))
+        flash('Грешно име или парола!', 'danger')
     return render_template('login.html')
 
 
@@ -52,25 +53,44 @@ def logout():
 
 @app.route('/dashboard')
 def dashboard():
-    if 'user_id' not in session: return redirect(url_for('login'))
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    # Взимаме абсолютно всички улови от базата данни за общата карта
+    all_logs = FishingLog.query.all()
+
     if session['role'] == 'admin':
         bookings = Booking.query.all()
-        logs = FishingLog.query.all()
-        return render_template('admin_dashboard.html', bookings=bookings, logs=logs)
-    return render_template('user_dashboard.html')
+        return render_template('admin_dashboard.html', bookings=bookings, logs=all_logs)
+
+    # За потребителя подаваме всички улови (all_logs)
+    return render_template('user_dashboard.html', all_logs=all_logs)
 
 
 @app.route('/book', methods=['POST'])
 def book():
+    if 'user_id' not in session: return redirect(url_for('login'))
+
     cat = request.form.get('category')
     age = int(request.form.get('age', 0))
     exp = int(request.form.get('experience', 0))
 
+    # Инициализираме променливите като None (празни)
+    comp_date = None
+    region = None
+    weekend = None
     price = 0.0
+
+    # Логика за разграничаване на категориите
     if cat == 'Competition':
-        # Примерна логика: такса според опита
+        comp_date = request.form.get('comp_date')
+        # Такса според опита
         price = 15.0 + (exp * 1.5)
         if age < 18: price = 7.5
+    else:
+        # За социален риболов взимаме региона и уикенда от календара
+        region = request.form.get('region')
+        weekend = request.form.get('weekend')
 
     new_booking = Booking(
         user_id=session['user_id'],
@@ -79,29 +99,40 @@ def book():
         email=request.form.get('email'),
         age=age,
         experience_years=exp,
-        competition_date=request.form.get('comp_date'),
+        competition_date=comp_date,
         price_eur=price,
-        preferred_region=request.form.get('region'),
-        preferred_weekend=request.form.get('weekend')
+        preferred_region=region,
+        preferred_weekend=weekend
     )
+
     db.session.add(new_booking)
     db.session.commit()
-    flash('Успешно записване!', 'success')
+    flash('Записването е успешно!', 'success')
     return redirect(url_for('dashboard'))
 
 
 @app.route('/submit-log', methods=['POST'])
 def submit_log():
-    log = FishingLog(
-        user_id=session['user_id'],
-        fish_type=request.form.get('fish_type'),
-        water_info=request.form.get('water_info'),
-        lat=float(request.form.get('lat')),
-        lng=float(request.form.get('lng'))
-    )
-    db.session.add(log)
-    db.session.commit()
-    flash('Уловът е записан!', 'info')
+    if 'user_id' not in session: return redirect(url_for('login'))
+
+    # Взимаме координатите и описанието от скритите полета
+    lat_val = request.form.get('lat')
+    lng_val = request.form.get('lng')
+
+    if lat_val and lng_val:
+        log = FishingLog(
+            user_id=session['user_id'],
+            fish_type=request.form.get('fish_type'),
+            water_info=request.form.get('water_info'),
+            lat=float(lat_val),
+            lng=float(lng_val)
+        )
+        db.session.add(log)
+        db.session.commit()
+        flash('Твоят улов беше добавен на общата карта!', 'info')
+    else:
+        flash('Грешка при определяне на местоположението!', 'danger')
+
     return redirect(url_for('dashboard'))
 
 

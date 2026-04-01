@@ -5,20 +5,23 @@
     <title>ИАРА - Администрация</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f4f4f4; }
-        .nav { background: #1a1a1a; color: white; padding: 15px 40px; display: flex; justify-content: space-between; }
+        .nav { background: #1a1a1a; color: white; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; }
         .container { max-width: 1200px; margin: auto; padding: 20px; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 25px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 25px; }
+        h3 { color: #003366; margin-top: 0; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
         th { background: #003366; color: white; }
-        .badge-comp { background: #ff4d4d; color: white; padding: 5px; border-radius: 5px; font-size: 12px; }
-        .badge-social { background: #28a745; color: white; padding: 5px; border-radius: 5px; font-size: 12px; }
+        tr:hover { background-color: #f9f9f9; }
+        .badge-comp { background: #ff4d4d; color: white; padding: 6px 10px; border-radius: 5px; font-size: 12px; font-weight: bold; }
+        .badge-social { background: #28a745; color: white; padding: 6px 10px; border-radius: 5px; font-size: 12px; font-weight: bold; }
+        .price-tag { font-weight: bold; color: #003366; }
     </style>
 </head>
 <body>
     <div class="nav">
         <h2>🛡️ ИАРА Административен Контрол</h2>
-        <a href="{{ url_for('logout') }}" style="color:white; text-decoration:none;">Изход</a>
+        <a href="{{ url_for('logout') }}" style="color:white; text-decoration:none; font-weight:bold; border: 1px solid white; padding: 5px 15px; border-radius: 5px;">Изход</a>
     </div>
 
     <div class="container">
@@ -30,8 +33,8 @@
                         <th>Категория</th>
                         <th>Имена</th>
                         <th>Контакт</th>
-                        <th>Опит/Възраст</th>
-                        <th>Детайли (Дата/Регион)</th>
+                        <th>Опит / Възраст</th>
+                        <th>Детайли (Дата / Регион)</th>
                         <th>Цена (€)</th>
                     </tr>
                 </thead>
@@ -40,16 +43,33 @@
                     <tr>
                         <td>
                             {% if b.category == 'Competition' %}
-                                <span class="badge-comp">Състезание</span>
+                                <span class="badge-comp">🏆 Състезание</span>
                             {% else %}
-                                <span class="badge-social">Социален</span>
+                                <span class="badge-social">🤝 Социален</span>
                             {% endif %}
                         </td>
                         <td>{{ b.full_name }}</td>
                         <td>{{ b.email }}</td>
-                        <td>{{ b.experience_years }}г. опит / {{ b.age }}г.</td>
-                        <td>{{ b.competition_date or b.preferred_region + ' (' + b.preferred_weekend + ')' }}</td>
-                        <td>{{ b.price_eur }} €</td>
+                        <td>{{ b.experience_years }}г. / {{ b.age }}г.</td>
+                        <td>
+                            {% if b.category == 'Competition' %}
+                                📅 <b>{{ b.competition_date }}</b>
+                            {% else %}
+                                📍 {{ b.preferred_region }} <br>
+                                <small>🗓️ {{ b.preferred_weekend }}</small>
+                            {% endif %}
+                        </td>
+                        <td class="price-tag">
+                            {% if b.price_eur > 0 %}
+                                {{ "%.2f"|format(b.price_eur) }} €
+                            {% else %}
+                                <span style="color: #28a745;">Безплатно</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: #999; padding: 30px;">Няма намерени записвания.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -57,23 +77,27 @@
         </div>
 
         <div class="card">
-            <h3>📝 Регистриран улов по карта</h3>
+            <h3>📝 Регистриран улов по карта (Всички потребители)</h3>
             <table>
                 <thead>
                     <tr>
                         <th>Рибар ID</th>
                         <th>Вид риба</th>
                         <th>Информация за водоема</th>
-                        <th>Дата</th>
+                        <th>Дата и час</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for log in logs %}
                     <tr>
-                        <td>{{ log.user_id }}</td>
-                        <td>{{ log.fish_type }}</td>
+                        <td>#{{ log.user_id }}</td>
+                        <td><b>{{ log.fish_type }}</b></td>
                         <td>{{ log.water_info }}</td>
-                        <td>{{ log.log_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>{{ log.log_date.strftime('%d.%m.%Y %H:%M') }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: #999; padding: 30px;">Все още няма регистриран улов на картата.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
