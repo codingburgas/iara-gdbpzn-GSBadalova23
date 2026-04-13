@@ -15,7 +15,9 @@
         tr:hover { background-color: #f9f9f9; }
         .badge-comp { background: #ff4d4d; color: white; padding: 6px 10px; border-radius: 5px; font-size: 12px; font-weight: bold; }
         .badge-social { background: #28a745; color: white; padding: 6px 10px; border-radius: 5px; font-size: 12px; font-weight: bold; }
-        .price-tag { font-weight: bold; color: #003366; }
+        .status-at-sea { color: #007bff; font-weight: bold; }
+        .status-landed { color: #28a745; font-weight: bold; }
+        .delivery-id { font-family: monospace; background: #eee; padding: 2px 5px; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -34,7 +36,7 @@
                         <th>Имена</th>
                         <th>Контакт</th>
                         <th>Опит / Възраст</th>
-                        <th>Детайли (Дата / Регион)</th>
+                        <th>Детайли</th>
                         <th>Цена (€)</th>
                     </tr>
                 </thead>
@@ -59,17 +61,7 @@
                                 <small>🗓️ {{ b.preferred_weekend }}</small>
                             {% endif %}
                         </td>
-                        <td class="price-tag">
-                            {% if b.price_eur > 0 %}
-                                {{ "%.2f"|format(b.price_eur) }} €
-                            {% else %}
-                                <span style="color: #28a745;">Безплатно</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="6" style="text-align: center; color: #999; padding: 30px;">Няма намерени записвания.</td>
+                        <td>{{ "%.2f"|format(b.price_eur) }} €</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -77,14 +69,15 @@
         </div>
 
         <div class="card">
-            <h3>📝 Регистриран улов по карта (Всички потребители)</h3>
+            <h3>📝 Проследяемост на улова (Supply Chain)</h3>
             <table>
                 <thead>
                     <tr>
                         <th>Рибар ID</th>
                         <th>Вид риба</th>
-                        <th>Информация за водоема</th>
-                        <th>Дата и час</th>
+                        <th>Водоем</th>
+                        <th>Статус / Дестинация</th>
+                        <th>Транспортен Код</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -92,12 +85,22 @@
                     <tr>
                         <td>#{{ log.user_id }}</td>
                         <td><b>{{ log.fish_type }}</b></td>
-                        <td>{{ log.water_info }}</td>
-                        <td>{{ log.log_date.strftime('%d.%m.%Y %H:%M') }}</td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="4" style="text-align: center; color: #999; padding: 30px;">Все още няма регистриран улов на картата.</td>
+                        <td><small>{{ log.water_info }}</small></td>
+                        <td>
+                            {% if log.status == 'At Sea' %}
+                                <span class="status-at-sea">🌊 На кораб</span>
+                            {% else %}
+                                <span class="status-landed">🚛 В склад/магазин:</span><br>
+                                <b>{{ log.destination }}</b>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.delivery_id %}
+                                <span class="delivery-id">{{ log.delivery_id }}</span>
+                            {% else %}
+                                <small style="color:#999;">Няма генериран код</small>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>

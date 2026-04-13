@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from models import db, User, Booking, FishingLog
 from datetime import datetime
+import uuid  # За генериране на уникални кодове за доставка
 
 app = Flask(__name__)
 app.secret_key = 'iara_final_ultra_2026'
@@ -23,7 +24,6 @@ def signup():
     if request.method == 'POST':
         user_name = request.form.get('username')
         pwd = request.form.get('password')
-        # Първият регистриран е админ, следващите са потребители
         role = 'admin' if User.query.count() == 0 else 'user'
         new_user = User(username=user_name, password=pwd, role=role)
         db.session.add(new_user)
@@ -56,14 +56,12 @@ def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
-    # Взимаме абсолютно всички улови от базата данни за общата карта
     all_logs = FishingLog.query.all()
 
     if session['role'] == 'admin':
         bookings = Booking.query.all()
         return render_template('admin_dashboard.html', bookings=bookings, logs=all_logs)
 
-    # За потребителя подаваме всички улови (all_logs)
     return render_template('user_dashboard.html', all_logs=all_logs)
 
 
@@ -75,20 +73,13 @@ def book():
     age = int(request.form.get('age', 0))
     exp = int(request.form.get('experience', 0))
 
-    # Инициализираме променливите като None (празни)
-    comp_date = None
-    region = None
-    weekend = None
-    price = 0.0
+    comp_date, region, weekend, price = None, None, None, 0.0
 
-    # Логика за разграничаване на категориите
     if cat == 'Competition':
         comp_date = request.form.get('comp_date')
-        # Такса според опита
         price = 15.0 + (exp * 1.5)
         if age < 18: price = 7.5
     else:
-        # За социален риболов взимаме региона и уикенда от календара
         region = request.form.get('region')
         weekend = request.form.get('weekend')
 
@@ -115,7 +106,6 @@ def book():
 def submit_log():
     if 'user_id' not in session: return redirect(url_for('login'))
 
-    # Взимаме координатите и описанието от скритите полета
     lat_val = request.form.get('lat')
     lng_val = request.form.get('lng')
 
@@ -132,6 +122,24 @@ def submit_log():
         flash('Твоят улов беше добавен на общата карта!', 'info')
     else:
         flash('Грешка при определяне на местоположението!', 'danger')
+
+    return redirect(url_for('dashboard'))
+
+
+# --- НОВ МАРШРУТ: ЛОГИСТИКА И РАЗТОВАРВАНЕ ---
+@app.route('/transfer-fish/<int:log_id>', methods=['POST'])
+def transfer_fish(log_id):
+    if 'user_id' not in session: return redirect(url_for('login'))
+
+    log = FishingLog.query.get(log_id)
+    # Проверка дали уловът съществува и принадлежи на текущия потребител
+    if log and log.user_id == session['user_id']:
+        log.delivery_id = str(uuid.uuid4())[:8].upper()  # Генерира код от 8 символа
+        log.destination = request.form.get('destination')
+        log.status = "Disembarked"
+
+        db.session.commit()
+        flash(f'Рибата е разтоварена успешно! Транспортен код: {log.delivery_id}', 'success')
 
     return redirect(url_for('dashboard'))
 
