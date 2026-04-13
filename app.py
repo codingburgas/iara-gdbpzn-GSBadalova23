@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from models import db, User, Booking, FishingLog
 from datetime import datetime
-import uuid  # За генериране на уникални кодове за доставка
+import uuid
 
 app = Flask(__name__)
 app.secret_key = 'iara_final_ultra_2026'
@@ -106,41 +106,65 @@ def book():
 def submit_log():
     if 'user_id' not in session: return redirect(url_for('login'))
 
+    fish_type = request.form.get('fish_type').strip().capitalize()
     lat_val = request.form.get('lat')
     lng_val = request.form.get('lng')
+
+    # --- ТОЧКА 3: ЕКСПЕРТНА ПРОВЕРКА ЗА ЗАБРАНЕНИ РИБИ ---
+    forbidden_fish = ["Калкан", "Есетра", "Моруна", "Бяла риба"]
+    warning = None
+    if fish_type in forbidden_fish:
+        warning = f"ВНИМАНИЕ: Уловът на {fish_type} е забранен или подлежи на глоба през този сезон!"
 
     if lat_val and lng_val:
         log = FishingLog(
             user_id=session['user_id'],
-            fish_type=request.form.get('fish_type'),
+            fish_type=fish_type,
             water_info=request.form.get('water_info'),
             lat=float(lat_val),
             lng=float(lng_val)
         )
         db.session.add(log)
         db.session.commit()
-        flash('Твоят улов беше добавен на общата карта!', 'info')
+
+        if warning:
+            flash(warning, 'danger')
+        else:
+            flash('Твоят улов беше добавен на общата карта!', 'info')
     else:
         flash('Грешка при определяне на местоположението!', 'danger')
 
     return redirect(url_for('dashboard'))
 
 
-# --- НОВ МАРШРУТ: ЛОГИСТИКА И РАЗТОВАРВАНЕ ---
 @app.route('/transfer-fish/<int:log_id>', methods=['POST'])
 def transfer_fish(log_id):
     if 'user_id' not in session: return redirect(url_for('login'))
-
     log = FishingLog.query.get(log_id)
-    # Проверка дали уловът съществува и принадлежи на текущия потребител
     if log and log.user_id == session['user_id']:
-        log.delivery_id = str(uuid.uuid4())[:8].upper()  # Генерира код от 8 символа
+        log.delivery_id = str(uuid.uuid4())[:8].upper()
         log.destination = request.form.get('destination')
         log.status = "Disembarked"
-
         db.session.commit()
-        flash(f'Рибата е разтоварена успешно! Транспортен код: {log.delivery_id}', 'success')
+        flash(f'Рибата е разтоварена успешно! Код: {log.delivery_id}', 'success')
+    return redirect(url_for('dashboard'))
 
+
+# --- ТОЧКА 2: МАРШРУТ ЗА ИНСПЕКЦИИ (ГЛОБИ) ---
+@app.route('/inspect/<int:log_id>', methods=['POST'])
+def inspect(log_id):
+    if session.get('role') != 'admin':
+        flash('Нямате административни права!', 'danger')
+        return redirect(url_for('dashboard'))
+
+    log = FishingLog.query.get(log_id)
+    if log:
+        fine = request.form.get('fine')
+        log.fine_amount = float(fine) if fine else 0.0
+        log.inspection_note = request.form.get('note')
+        log.is_legal = False if log.fine_amount > 0 else True
+        db.session.commit()
+        flash(f'Инспекцията на улов #{log.id} е отразена!', 'warning')
     return redirect(url_for('dashboard'))
 
 

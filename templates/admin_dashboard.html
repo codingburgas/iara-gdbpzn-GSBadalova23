@@ -10,14 +10,23 @@
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 25px; }
         h3 { color: #003366; margin-top: 0; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; vertical-align: top; }
         th { background: #003366; color: white; }
         tr:hover { background-color: #f9f9f9; }
+
+        /* Статуси и Баджове */
         .badge-comp { background: #ff4d4d; color: white; padding: 6px 10px; border-radius: 5px; font-size: 12px; font-weight: bold; }
         .badge-social { background: #28a745; color: white; padding: 6px 10px; border-radius: 5px; font-size: 12px; font-weight: bold; }
         .status-at-sea { color: #007bff; font-weight: bold; }
         .status-landed { color: #28a745; font-weight: bold; }
-        .delivery-id { font-family: monospace; background: #eee; padding: 2px 5px; border-radius: 4px; }
+        .delivery-id { font-family: monospace; background: #eee; padding: 2px 5px; border-radius: 4px; font-weight: bold; }
+
+        /* Форма за Глоби */
+        .fine-badge { background: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 8px; border-radius: 6px; }
+        .btn-inspect { background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 11px; }
+        .inspect-input { padding: 5px; font-size: 12px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 4px; width: 130px; }
+
+        .flash { padding: 15px; margin-bottom: 20px; border-radius: 8px; text-align: center; font-weight: bold; background: #d1ecf1; color: #0c5460; }
     </style>
 </head>
 <body>
@@ -27,15 +36,22 @@
     </div>
 
     <div class="container">
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            {% for message in messages %}
+              <div class="flash">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
         <div class="card">
-            <h3>📅 Всички записвания (Състезания и Социален риболов)</h3>
+            <h3>📅 Всички записвания (Състезания и Социален)</h3>
             <table>
                 <thead>
                     <tr>
                         <th>Категория</th>
                         <th>Имена</th>
                         <th>Контакт</th>
-                        <th>Опит / Възраст</th>
                         <th>Детайли</th>
                         <th>Цена (€)</th>
                     </tr>
@@ -52,13 +68,11 @@
                         </td>
                         <td>{{ b.full_name }}</td>
                         <td>{{ b.email }}</td>
-                        <td>{{ b.experience_years }}г. / {{ b.age }}г.</td>
                         <td>
                             {% if b.category == 'Competition' %}
-                                📅 <b>{{ b.competition_date }}</b>
+                                <b>{{ b.competition_date }}</b>
                             {% else %}
-                                📍 {{ b.preferred_region }} <br>
-                                <small>🗓️ {{ b.preferred_weekend }}</small>
+                                📍 {{ b.preferred_region }} ({{ b.preferred_weekend }})
                             {% endif %}
                         </td>
                         <td>{{ "%.2f"|format(b.price_eur) }} €</td>
@@ -69,36 +83,55 @@
         </div>
 
         <div class="card">
-            <h3>📝 Проследяемост на улова (Supply Chain)</h3>
+            <h3>📝 Проследяемост и Инспекция на улова</h3>
             <table>
                 <thead>
                     <tr>
                         <th>Рибар ID</th>
-                        <th>Вид риба</th>
-                        <th>Водоем</th>
-                        <th>Статус / Дестинация</th>
-                        <th>Транспортен Код</th>
+                        <th>Улов / Водоем</th>
+                        <th>Статус / Код</th>
+                        <th>🚨 Контрол (Актове)</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for log in logs %}
                     <tr>
                         <td>#{{ log.user_id }}</td>
-                        <td><b>{{ log.fish_type }}</b></td>
-                        <td><small>{{ log.water_info }}</small></td>
+                        <td>
+                            <b>{{ log.fish_type }}</b><br>
+                            <small>{{ log.water_info }}</small>
+                        </td>
                         <td>
                             {% if log.status == 'At Sea' %}
                                 <span class="status-at-sea">🌊 На кораб</span>
                             {% else %}
-                                <span class="status-landed">🚛 В склад/магазин:</span><br>
-                                <b>{{ log.destination }}</b>
+                                <span class="status-landed">🚛 Разтоварена в: {{ log.destination }}</span><br>
+                                <span class="delivery-id">{{ log.delivery_id }}</span>
                             {% endif %}
                         </td>
                         <td>
-                            {% if log.delivery_id %}
-                                <span class="delivery-id">{{ log.delivery_id }}</span>
+                            {% if log.is_legal and log.fine_amount == 0 %}
+                                <form action="{{ url_for('inspect', log_id=log.id) }}" method="POST" style="display:flex; flex-direction:column;">
+                                    <input type="number" name="fine" step="0.01" placeholder="Глоба (€)" class="inspect-input" required>
+
+                                    <select name="note" class="inspect-input" required>
+                                        <option value="" disabled selected>Избери нарушение...</option>
+                                        <option value="Улов под минималния размер">📏 Под размер</option>
+                                        <option value="Забранени уреди (мрежи)">🕸️ Забранени уреди</option>
+                                        <option value="Над пределния лимит (кг)">⚖️ Над лимита</option>
+                                        <option value="Риболов в забранен период">🚫 Забранен сезон</option>
+                                        <option value="Липса на риболовен билет">🎫 Без билет</option>
+                                        <option value="Друго нарушение">📝 Друго...</option>
+                                    </select>
+
+                                    <button type="submit" class="btn-inspect">Запиши Акт</button>
+                                </form>
                             {% else %}
-                                <small style="color:#999;">Няма генериран код</small>
+                                <div class="fine-badge">
+                                    <b style="color:#dc3545;">⚠️ ИЗДАДЕН АКТ</b><br>
+                                    <b>{{ "%.2f"|format(log.fine_amount) }} €</b><br>
+                                    <small>{{ log.inspection_note }}</small>
+                                </div>
                             {% endif %}
                         </td>
                     </tr>
