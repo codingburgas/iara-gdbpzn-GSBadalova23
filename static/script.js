@@ -5,30 +5,24 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors'
 }).addTo(map);
 
-/**
- * 2. ФУНКЦИЯ ЗА ЗАРЕЖДАНЕ НА ВЕЧЕ СЪЩЕСТВУВАЩИ УЛОВИ
- * Тази функция ще се извиква от HTML файла, за да начертае маркерите на другите рибари.
- */
+// 2. Зареждане на съществуващи маркери
 function loadExistingMarkers(logs) {
     logs.forEach(log => {
         if (log.lat && log.lng) {
-            L.marker([log.lat, log.lng])
-                .addTo(map)
+            L.marker([log.lat, log.lng]).addTo(map)
                 .bindPopup(`
                     <div style="text-align:center;">
-                        <b style="color:#003366; font-size:1.1em;">🐟 ${log.fish_type}</b><br>
+                        <b style="color:#003366;">🐟 ${log.fish_type}</b><br>
                         <small>${log.water_info}</small><br>
-                        <button onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${log.lat},${log.lng}', '_blank')" 
-                                style="cursor:pointer; background:#003366; color:white; border:none; padding:5px 10px; border-radius:5px; margin-top:8px;">
-                            Маршрут до тук 🚗
-                        </button>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=${log.lat},${log.lng}" 
+                           target="_blank" style="text-decoration:none; color:blue; font-size:11px;">🚗 Навигация</a>
                     </div>
                 `);
         }
     });
 }
 
-// 3. Логика при клик върху картата (за НОВ улов)
+// 3. Клик върху картата за локация
 map.on('click', function(e) {
     var lat = e.latlng.lat;
     var lng = e.latlng.lng;
@@ -38,50 +32,72 @@ map.on('click', function(e) {
     .then(data => {
         let a = data.address;
         let water = a.river || a.lake || a.water || a.sea || "водоем";
-        let near = a.city || a.village || a.town || a.county || "планината";
-        let type = data.type || "място";
-
-        let info = `Това е ${type} ${water} в близост до ${near}`;
+        let info = `Място: ${water} в регион ${a.city || a.village || a.county || "България"}`;
 
         document.getElementById('lat').value = lat;
         document.getElementById('lng').value = lng;
         document.getElementById('water_info').value = info;
-        document.getElementById('loc_text').innerText = info;
 
-        if(confirm(info + "\n\nИскате ли маршрут от Бургас до тук?")) {
-            // Оправен линк за Google Maps навигация
-            window.open(`https://www.google.com/maps/dir/?api=1&origin=Burgas&destination=${lat},${lng}`, '_blank');
-        }
-    })
-    .catch(err => console.error("Грешка при ГИС търсенето:", err));
+        let locBox = document.getElementById('loc_text');
+        locBox.innerText = info;
+        locBox.style.background = "#e7f3ff";
+    });
 });
 
-// 4. Функция за превключване на категориите
+// 4. ЕКСПЕРТНА БАЗА ДАННИ (FRONTEND)
+const fishDatabase = {
+    "Есетра": "🚨 КРИТИЧНО: Защитен вид! Уловът е абсолютно забранен!",
+    "Моруна": "🚨 КРИТИЧНО: Забранен за улов вид! Веднага върнете във водата.",
+    "Чига": "🚨 ЗАБРАНА: Защитен вид в р. Дунав!",
+    "Калкан": "⚖️ КВОТА: Забрана 15.04-15.06. Мин. размер 45 см.",
+    "Бяла риба": "⚠️ ВНИМАНИЕ: Забрана 15.03 - 15.05! Мин. размер 45 см.",
+    "Щука": "⚠️ ВНИМАНИЕ: Забрана 01.02 - 30.04! Мин. размер 35 см.",
+    "Шаран": "📅 СЕЗОН: Забрана 15.04 - 31.05. Мин. размер 30 см.",
+    "Сом": "📏 РАЗМЕР: Минимален разрешен размер 65 см.",
+    "Пъстърва": "❄️ ЗИМНА ЗАБРАНА: 01.10 - 31.01! Мин. размер 23 см.",
+    "Паламуд": "🌊 МОРСКИ: Минимален разрешен размер 28 см.",
+    "Сафрид": "🌊 МОРСКИ: Минимален разрешен размер 12 см.",
+    "Чернокоп": "🌊 МОРСКИ: Минимален разрешен размер 18 см."
+};
+
+const fishInput = document.querySelector('input[name="fish_type"]');
+const submitBtn = document.querySelector('button[type="submit"]');
+
+if (fishInput) {
+    fishInput.addEventListener('input', function(e) {
+        let val = e.target.value.trim();
+        if (val.length === 0) return;
+
+        let capitalized = val.charAt(0).toUpperCase() + val.slice(1).toLowerCase();
+        let locBox = document.getElementById('loc_text');
+
+        if (fishDatabase[capitalized]) {
+            let msg = fishDatabase[capitalized];
+            if (msg.includes("🚨")) {
+                locBox.style.background = "#ffebee"; locBox.style.color = "#c62828";
+                submitBtn.disabled = true; submitBtn.innerText = "ЗАБРАНЕН УЛОВ!";
+            } else {
+                locBox.style.background = "#fff3e0"; locBox.style.color = "#ef6c00";
+                submitBtn.disabled = false; submitBtn.innerText = "Запиши улов";
+            }
+            locBox.innerHTML = msg;
+        } else {
+            locBox.style.background = "#e7f3ff"; locBox.style.color = "#003366";
+            locBox.innerText = `Видът "${capitalized}" изглежда разрешен.`;
+            submitBtn.disabled = false; submitBtn.innerText = "Запиши улов";
+        }
+    });
+}
+
+// 5. Помощни функции
 function updateUI() {
     let cat = document.getElementById('category').value;
     document.getElementById('comp_ui').style.display = (cat === 'Competition') ? 'block' : 'none';
     document.getElementById('social_ui').style.display = (cat === 'Social') ? 'block' : 'none';
 }
 
-// 5. Инициализиране на календара Flatpickr
 flatpickr("#weekend_picker", {
     minDate: "today",
-    maxDate: new Date().fp_incr(210),
-    "disable": [
-        function(date) {
-            return (date.getDay() === 1 || date.getDay() === 2 || date.getDay() === 3 || date.getDay() === 4 || date.getDay() === 5);
-        }
-    ],
-    locale: {
-        firstDayOfWeek: 1,
-        weekdays: {
-            shorthand: ["Нд", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"],
-            longhand: ["Неделя", "Понеделник", "Вторник", "Сряда", "Четвъртък", "Петък", "Събота"]
-        },
-        months: {
-            shorthand: ["Ян", "Фев", "Мар", "Апр", "Май", "Юни", "Юли", "Авг", "Сеп", "Окт", "Нов", "Дек"],
-            longhand: ["Януари", "Февруари", "Март", "Април", "Май", "Юни", "Юли", "Август", "Септември", "Октомври", "Ноември", "Декември"]
-        }
-    },
-    dateFormat: "d.m.Y (l)"
+    disable: [date => (date.getDay() !== 0 && date.getDay() !== 6)],
+    locale: "bg", dateFormat: "d.m.Y (l)"
 });
