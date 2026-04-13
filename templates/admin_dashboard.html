@@ -3,12 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <title>ИАРА - Администрация</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f4f4f4; }
         .nav { background: #1a1a1a; color: white; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; }
         .container { max-width: 1200px; margin: auto; padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 25px; }
         h3 { color: #003366; margin-top: 0; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+
+        /* Стилизиране на зоната за графики */
+        .charts-wrapper { display: flex; justify-content: space-around; gap: 20px; flex-wrap: wrap; align-items: center; }
+        .chart-container { width: 100%; max-width: 350px; text-align: center; }
+
         table { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; vertical-align: top; }
         th { background: #003366; color: white; }
@@ -43,6 +49,20 @@
             {% endfor %}
           {% endif %}
         {% endwith %}
+
+        <div class="card">
+            <h3>📈 Анализ на дейността</h3>
+            <div class="charts-wrapper">
+                <div class="chart-container">
+                    <p><b>Изрядни срещу Нарушители</b></p>
+                    <canvas id="legalChart"></canvas>
+                </div>
+                <div class="chart-container" style="max-width: 450px;">
+                    <p><b>Финансови приходи (€)</b></p>
+                    <canvas id="moneyChart"></canvas>
+                </div>
+            </div>
+        </div>
 
         <div class="card">
             <h3>📅 Всички записвания (Състезания и Социален)</h3>
@@ -140,5 +160,19 @@
             </table>
         </div>
     </div>
+
+    <script src="{{ url_for('static', filename='admin_charts.js') }}"></script>
+    <script>
+        // Подготвяме обекта с данни от Flask (Jinja2) за JavaScript
+        const statsData = {
+            legalCount: {{ logs|selectattr("is_legal", "equalto", true)|list|length }},
+            illegalCount: {{ logs|selectattr("is_legal", "equalto", false)|list|length }},
+            bookingRevenue: {{ bookings|sum(attribute='price_eur') }},
+            fineRevenue: {{ logs|sum(attribute='fine_amount') }}
+        };
+
+        // Извикваме инициализиращата функция от admin_charts.js
+        initAdminCharts(statsData);
+    </script>
 </body>
 </html>
