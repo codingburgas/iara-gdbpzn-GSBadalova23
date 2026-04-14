@@ -1,9 +1,5 @@
-/**
- * ФУНКЦИЯ ЗА ИНИЦИАЛИЗИРАНЕ НА ГРАФИКИТЕ
- * Извиква се от HTML, след като данните са подготвени.
- */
 function initAdminCharts(data) {
-    // 1. Графика: Изрядни срещу Нарушители (Pie Chart)
+
     const ctxLegal = document.getElementById('legalChart').getContext('2d');
     new Chart(ctxLegal, {
         type: 'pie',
@@ -23,7 +19,7 @@ function initAdminCharts(data) {
         }
     });
 
-    // 2. Графика: Приходи (Bar Chart)
+
     const ctxMoney = document.getElementById('moneyChart').getContext('2d');
     new Chart(ctxMoney, {
         type: 'bar',

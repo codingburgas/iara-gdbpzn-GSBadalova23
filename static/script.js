@@ -1,11 +1,9 @@
-// 1. Инициализиране на картата
 var map = L.map('map').setView([42.50, 27.46], 7);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors'
 }).addTo(map);
 
-// 2. Зареждане на съществуващи маркери
 function loadExistingMarkers(logs) {
     logs.forEach(log => {
         if (log.lat && log.lng) {
@@ -22,7 +20,7 @@ function loadExistingMarkers(logs) {
     });
 }
 
-// 3. Клик върху картата за локация
+
 map.on('click', function(e) {
     var lat = e.latlng.lat;
     var lng = e.latlng.lng;
@@ -44,7 +42,7 @@ map.on('click', function(e) {
     });
 });
 
-// 4. ЕКСПЕРТНА БАЗА ДАННИ (FRONTEND)
+
 const fishDatabase = {
     "Есетра": "🚨 КРИТИЧНО: Защитен вид! Уловът е абсолютно забранен!",
     "Моруна": "🚨 КРИТИЧНО: Забранен за улов вид! Веднага върнете във водата.",
@@ -89,7 +87,7 @@ if (fishInput) {
     });
 }
 
-// 5. Помощни функции
+
 function updateUI() {
     let cat = document.getElementById('category').value;
     document.getElementById('comp_ui').style.display = (cat === 'Competition') ? 'block' : 'none';
