@@ -13,21 +13,15 @@ db.init_app(app)
 with app.app_context():
     db.create_all()
 
-
 FISH_RULES = {
-
     "Есетра": "Критично застрашен вид! Уловът е абсолютно забранен (р. Дунав и Черно море).",
     "Моруна": "Забранен за улов вид! Веднага върнете рибата във водата.",
     "Чига": "Защитен вид в р. Дунав. Уловът е забранен!",
-
-
     "Калкан": "Квотен режим. Забрана: 15 април - 15 юни. Мин. размер: 45 см.",
     "Карагьоз": "Пролетна забрана (обикновено май). Минимален размер: 22 см.",
     "Паламуд": "Минимален разрешен размер: 28 см.",
     "Сафрид": "Минимален разрешен размер: 12 см.",
     "Чернокоп": "Минимален разрешен размер: 18 см.",
-
-
     "Шаран": "Забрана за размножаване: 15 април - 31 май. Мин. размер: 30 см.",
     "Бяла риба": "Забрана: 15 март - 15 май. Минимален размер: 45 см.",
     "Щука": "Забрана: 1 февруари - 30 април. Минимален размер: 35 см.",
@@ -153,20 +147,31 @@ def transfer_fish(log_id):
     return redirect(url_for('dashboard'))
 
 
+# --- ОБНОВЕН МАРШРУТ ЗА ИНСПЕКЦИЯ ---
 @app.route('/inspect/<int:log_id>', methods=['POST'])
 def inspect(log_id):
     if session.get('role') != 'admin': return redirect(url_for('dashboard'))
     log = FishingLog.query.get(log_id)
     if log:
-        try:
-            fine = request.form.get('fine')
-            log.fine_amount = float(fine) if fine else 0.0
-            log.inspection_note = request.form.get('note')
-            log.is_legal = False if log.fine_amount > 0 else True
-            db.session.commit()
-            flash(f'Акт #{log.id} е издаден!', 'warning')
-        except:
-            flash('Грешна стойност!', 'danger')
+        # Проверка за зеления бутон "Изряден"
+        status = request.form.get('status')
+
+        if status == 'ok':
+            log.fine_amount = 0.0
+            log.inspection_note = "Изряден улов"
+            log.is_legal = True
+            flash(f'Улов #{log.id} е отбелязан като изряден!', 'success')
+        else:
+            try:
+                fine = request.form.get('fine')
+                log.fine_amount = float(fine) if fine else 0.0
+                log.inspection_note = request.form.get('note') or "Нарушение"
+                log.is_legal = False if log.fine_amount > 0 else True
+                flash(f'Акт #{log.id} е издаден успешно!', 'warning')
+            except:
+                flash('Грешна стойност за глоба!', 'danger')
+
+        db.session.commit()
     return redirect(url_for('dashboard'))
 
 

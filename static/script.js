@@ -1,9 +1,11 @@
+// 1. Инициализиране на картата
 var map = L.map('map').setView([42.50, 27.46], 7);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors'
 }).addTo(map);
 
+// 2. Зареждане на съществуващи маркери
 function loadExistingMarkers(logs) {
     logs.forEach(log => {
         if (log.lat && log.lng) {
@@ -20,7 +22,7 @@ function loadExistingMarkers(logs) {
     });
 }
 
-
+// 3. Клик върху картата за локация
 map.on('click', function(e) {
     var lat = e.latlng.lat;
     var lng = e.latlng.lng;
@@ -42,20 +44,15 @@ map.on('click', function(e) {
     });
 });
 
-
-const fishDatabase = {
-    "Есетра": "🚨 КРИТИЧНО: Защитен вид! Уловът е абсолютно забранен!",
-    "Моруна": "🚨 КРИТИЧНО: Забранен за улов вид! Веднага върнете във водата.",
-    "Чига": "🚨 ЗАБРАНА: Защитен вид в р. Дунав!",
-    "Калкан": "⚖️ КВОТА: Забрана 15.04-15.06. Мин. размер 45 см.",
-    "Бяла риба": "⚠️ ВНИМАНИЕ: Забрана 15.03 - 15.05! Мин. размер 45 см.",
-    "Щука": "⚠️ ВНИМАНИЕ: Забрана 01.02 - 30.04! Мин. размер 35 см.",
-    "Шаран": "📅 СЕЗОН: Забрана 15.04 - 31.05. Мин. размер 30 см.",
-    "Сом": "📏 РАЗМЕР: Минимален разрешен размер 65 см.",
-    "Пъстърва": "❄️ ЗИМНА ЗАБРАНА: 01.10 - 31.01! Мин. размер 23 см.",
-    "Паламуд": "🌊 МОРСКИ: Минимален разрешен размер 28 см.",
-    "Сафрид": "🌊 МОРСКИ: Минимален разрешен размер 12 см.",
-    "Чернокоп": "🌊 МОРСКИ: Минимален разрешен размер 18 см."
+// 4. ЕКСПЕРТНА БАЗА ДАННИ С ПРОВЕРКА НА ДАТИ (Real-time)
+const fishRules = {
+    "Шаран": { start: [4, 15], end: [5, 31], msg: "период (15.04 - 31.05)", minSize: 30 },
+    "Бяла риба": { start: [3, 15], end: [5, 15], msg: "период (15.03 - 15.05)", minSize: 45 },
+    "Щука": { start: [2, 1], end: [4, 30], msg: "период (01.02 - 30.04)", minSize: 35 },
+    "Калкан": { start: [4, 15], end: [6, 15], msg: "период (15.04 - 15.06)", minSize: 45 },
+    "Есетра": { permanent: true, msg: "🚨 ЗАБРАНЕН ВИД! Пълна защита." },
+    "Моруна": { permanent: true, msg: "🚨 ЗАБРАНЕН ВИД! Пълна защита." },
+    "Чига": { permanent: true, msg: "🚨 ЗАБРАНЕН ВИД! Пълна защита." }
 };
 
 const fishInput = document.querySelector('input[name="fish_type"]');
@@ -63,30 +60,39 @@ const submitBtn = document.querySelector('button[type="submit"]');
 
 if (fishInput) {
     fishInput.addEventListener('input', function(e) {
-        let val = e.target.value.trim();
-        if (val.length === 0) return;
-
-        let capitalized = val.charAt(0).toUpperCase() + val.slice(1).toLowerCase();
+        let val = e.target.value.trim().charAt(0).toUpperCase() + e.target.value.trim().slice(1).toLowerCase();
         let locBox = document.getElementById('loc_text');
+        let today = new Date();
 
-        if (fishDatabase[capitalized]) {
-            let msg = fishDatabase[capitalized];
-            if (msg.includes("🚨")) {
+        if (fishRules[val]) {
+            let rule = fishRules[val];
+
+            if (rule.permanent) {
                 locBox.style.background = "#ffebee"; locBox.style.color = "#c62828";
+                locBox.innerHTML = rule.msg;
                 submitBtn.disabled = true; submitBtn.innerText = "ЗАБРАНЕН УЛОВ!";
             } else {
-                locBox.style.background = "#fff3e0"; locBox.style.color = "#ef6c00";
-                submitBtn.disabled = false; submitBtn.innerText = "Запиши улов";
+                let startDate = new Date(today.getFullYear(), rule.start[0]-1, rule.start[1]);
+                let endDate = new Date(today.getFullYear(), rule.end[0]-1, rule.end[1]);
+                let isForbidden = (today >= startDate && today <= endDate);
+
+                if (isForbidden) {
+                    locBox.style.background = "#ffebee"; locBox.style.color = "#c62828";
+                    locBox.innerHTML = `🚨 <b>ЗАБРАНЕНО!</b> Размножителен ${rule.msg}`;
+                    submitBtn.disabled = true; submitBtn.innerText = "В ЗАБРАНА";
+                } else {
+                    locBox.style.background = "#fff3e0"; locBox.style.color = "#ef6c00";
+                    locBox.innerHTML = `ℹ️ <b>РАЗРЕШЕНО</b> в момента. Внимавайте за ${rule.msg}. Мин. размер: ${rule.minSize}см.`;
+                    submitBtn.disabled = false; submitBtn.innerText = "Запиши улов";
+                }
             }
-            locBox.innerHTML = msg;
-        } else {
+        } else if (val.length > 0) {
             locBox.style.background = "#e7f3ff"; locBox.style.color = "#003366";
-            locBox.innerText = `Видът "${capitalized}" изглежда разрешен.`;
+            locBox.innerText = `Видът "${val}" изглежда разрешен за свободен риболов.`;
             submitBtn.disabled = false; submitBtn.innerText = "Запиши улов";
         }
     });
 }
-
 
 function updateUI() {
     let cat = document.getElementById('category').value;

@@ -2,7 +2,7 @@
 <html lang="bg">
 <head>
     <meta charset="UTF-8">
-    <title>ИАРА - Администрация</title>
+    <title>🛡️ ИАРА - Администрация</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f4f4f4; }
@@ -10,6 +10,7 @@
         .container { max-width: 1200px; margin: auto; padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 25px; }
         h3 { color: #003366; margin-top: 0; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+
         .charts-wrapper { display: flex; justify-content: space-around; gap: 20px; flex-wrap: wrap; align-items: center; }
         .chart-container { width: 100%; max-width: 350px; text-align: center; }
 
@@ -24,10 +25,14 @@
         .status-landed { color: #28a745; font-weight: bold; }
         .delivery-id { font-family: monospace; background: #eee; padding: 2px 5px; border-radius: 4px; font-weight: bold; }
 
-        .fine-badge { background: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 8px; border-radius: 6px; }
-        .btn-inspect { background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 11px; }
-        .inspect-input { padding: 5px; font-size: 12px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 4px; width: 130px; }
+        .fine-badge { background: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 10px; border-radius: 8px; }
+        .success-badge { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 10px; border-radius: 8px; }
 
+        .btn-inspect { background: #dc3545; color: white; border: none; padding: 8px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 11px; flex: 1; transition: 0.3s; }
+        .btn-inspect:disabled { background: #ccc; cursor: not-allowed; opacity: 0.5; }
+        .btn-ok { background: #28a745 !important; opacity: 1 !important; cursor: pointer !important; }
+
+        .inspect-input { padding: 5px; font-size: 12px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 6px; width: 100%; box-sizing: border-box; }
         .flash { padding: 15px; margin-bottom: 20px; border-radius: 8px; text-align: center; font-weight: bold; background: #d1ecf1; color: #0c5460; }
     </style>
 </head>
@@ -61,7 +66,7 @@
         </div>
 
         <div class="card">
-            <h3>📅 Всички записвания (Състезания и Социален)</h3>
+            <h3>📅 Всички записвания</h3>
             <table>
                 <thead>
                     <tr>
@@ -99,14 +104,14 @@
         </div>
 
         <div class="card">
-            <h3>📝 Проследяемост и Инспекция на улова</h3>
+            <h3>📝 Проследяемост и Инспекция</h3>
             <table>
                 <thead>
                     <tr>
                         <th>Рибар ID</th>
                         <th>Улов / Водоем</th>
                         <th>Статус / Код</th>
-                        <th>🚨 Контрол (Актове)</th>
+                        <th>🚨 Контрол</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -126,27 +131,34 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% if log.is_legal and log.fine_amount == 0 %}
-                                <form action="{{ url_for('inspect', log_id=log.id) }}" method="POST" style="display:flex; flex-direction:column;">
-                                    <input type="number" name="fine" step="0.01" placeholder="Глоба (€)" class="inspect-input" required>
+                            {% if log.fine_amount == 0 and not log.inspection_note %}
+                                <form action="{{ url_for('inspect', log_id=log.id) }}" method="POST" class="inspect-form" style="display:flex; flex-direction:column;">
+                                    <input type="number" name="fine" step="0.01" placeholder="Глоба (€)" class="inspect-input fine-field">
 
-                                    <select name="note" class="inspect-input" required>
-                                        <option value="" disabled selected>Избери нарушение...</option>
+                                    <select name="note" class="inspect-input reason-field">
+                                        <option value="" selected>--- Избери нарушение ---</option>
                                         <option value="Улов под минималния размер">📏 Под размер</option>
                                         <option value="Забранени уреди (мрежи)">🕸️ Забранени уреди</option>
                                         <option value="Над пределния лимит (кг)">⚖️ Над лимита</option>
                                         <option value="Риболов в забранен период">🚫 Забранен сезон</option>
                                         <option value="Липса на риболовен билет">🎫 Без билет</option>
-                                        <option value="Друго нарушение">📝 Друго...</option>
                                     </select>
 
-                                    <button type="submit" class="btn-inspect">Запиши Акт</button>
+                                    <div style="display: flex; gap: 5px;">
+                                        <button type="submit" class="btn-inspect btn-act" disabled>Акт</button>
+                                        <button type="submit" name="status" value="ok" class="btn-inspect btn-ok">Изряден</button>
+                                    </div>
                                 </form>
-                            {% else %}
+                            {% elif log.fine_amount > 0 %}
                                 <div class="fine-badge">
                                     <b style="color:#dc3545;">⚠️ ИЗДАДЕН АКТ</b><br>
                                     <b>{{ "%.2f"|format(log.fine_amount) }} €</b><br>
                                     <small>{{ log.inspection_note }}</small>
+                                </div>
+                            {% else %}
+                                <div class="success-badge">
+                                    <b style="color:#28a745;">✅ ИЗРЯДЕН</b><br>
+                                    <small>Проверката е без нарушения.</small>
                                 </div>
                             {% endif %}
                         </td>
@@ -159,16 +171,29 @@
 
     <script src="{{ url_for('static', filename='admin_charts.js') }}"></script>
     <script>
-        // Подготвяме обекта с данни от Flask (Jinja2) за JavaScript
         const statsData = {
             legalCount: {{ logs|selectattr("is_legal", "equalto", true)|list|length }},
             illegalCount: {{ logs|selectattr("is_legal", "equalto", false)|list|length }},
             bookingRevenue: {{ bookings|sum(attribute='price_eur') }},
             fineRevenue: {{ logs|sum(attribute='fine_amount') }}
         };
-
-        // Извикваме инициализиращата функция от admin_charts.js
         initAdminCharts(statsData);
+
+        // ВАЛИДАЦИЯ НА АДМИНИСТРАТОРА (Оправдани глоби)
+        document.querySelectorAll('.inspect-form').forEach(form => {
+            const fineInput = form.querySelector('.fine-field');
+            const reasonSelect = form.querySelector('.reason-field');
+            const actBtn = form.querySelector('.btn-act');
+
+            const checkValidity = () => {
+                const isFineOk = parseFloat(fineInput.value) > 0;
+                const isReasonOk = reasonSelect.value !== "";
+                actBtn.disabled = !(isFineOk && isReasonOk);
+            };
+
+            fineInput.addEventListener('input', checkValidity);
+            reasonSelect.addEventListener('change', checkValidity);
+        });
     </script>
 </body>
 </html>
