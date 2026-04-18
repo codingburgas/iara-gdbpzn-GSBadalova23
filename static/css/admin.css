@@ -14,6 +14,15 @@
     text-align: center;
 }
 
+/* Форма за регистрация на кораби */
+.card label {
+    display: block;
+    font-size: 11px;
+    font-weight: bold;
+    color: #666;
+    margin-bottom: 2px;
+}
+
 /* Административни таблици */
 table {
     width: 100%;
@@ -25,9 +34,15 @@ th {
     background: #003366;
     color: white;
     padding: 14px;
+    font-size: 13px;
 }
 
-td { padding: 14px; border-bottom: 1px solid #ddd; vertical-align: top; }
+td {
+    padding: 12px;
+    border-bottom: 1px solid #ddd;
+    vertical-align: middle;
+    font-size: 13px;
+}
 
 tr:hover { background-color: #f8f9fa; }
 
@@ -36,11 +51,11 @@ tr:hover { background-color: #f8f9fa; }
 .badge-social { background: #28a745; color: white; padding: 5px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; }
 .status-at-sea { color: #007bff; font-weight: bold; }
 .status-landed { color: #28a745; font-weight: bold; }
-.delivery-id { font-family: 'Courier New', monospace; background: #eee; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+.delivery-id { font-family: 'Courier New', monospace; background: #eee; padding: 2px 6px; border-radius: 4px; font-weight: bold; color: #333; }
 
 /* Секция за инспекция и глоби */
-.fine-badge { background: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 12px; border-radius: 8px; }
-.success-badge { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 12px; border-radius: 8px; }
+.fine-badge { background: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 10px; border-radius: 8px; font-weight: bold; }
+.success-badge { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 10px; border-radius: 8px; font-weight: bold; }
 
 .btn-inspect {
     background: #dc3545;
@@ -51,17 +66,18 @@ tr:hover { background-color: #f8f9fa; }
     cursor: pointer;
     font-weight: bold;
     font-size: 11px;
-    transition: 0.3s;
+    transition: 0.2s;
 }
 
-.btn-inspect:disabled { background: #ccc; cursor: not-allowed; opacity: 0.6; }
-.btn-ok { background: #28a745 !important; opacity: 1 !important; }
+.btn-inspect:hover { opacity: 0.9; transform: translateY(-1px); }
+.btn-ok { background: #28a745 !important; }
 
 .inspect-input {
-    padding: 6px;
+    padding: 8px;
     font-size: 12px;
     border: 1px solid #ddd;
-    border-radius: 4px;
-    margin-bottom: 8px;
+    border-radius: 5px;
+    margin-bottom: 5px;
     width: 100%;
+    box-sizing: border-box;
 }

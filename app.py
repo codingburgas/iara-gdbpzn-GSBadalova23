@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
-from models import db, User, Booking, FishingLog
+from models import db, User, Booking, FishingLog, FishingVessel  # Добавен FishingVessel
 from datetime import datetime
 import uuid
 
@@ -14,7 +14,7 @@ db.init_app(app)
 with app.app_context():
     db.create_all()
 
-# Експертна база данни за сигнали (Backend помощник)
+# Експертна база данни за сигнали
 FISH_RULES = {
     "Есетра": "Критично застрашен вид! Уловът е абсолютно забранен (р. Дунав и Черно море).",
     "Моруна": "Забранен за улов вид! Веднага върнете рибата във водата.",
@@ -45,8 +45,6 @@ def signup():
     if request.method == 'POST':
         user_name = request.form.get('username').strip()
         pwd = request.form.get('password')
-
-        # КОРЕКЦИЯ: Проверка за уникалност, за да се избегне IntegrityError
         existing_user = User.query.filter_by(username=user_name).first()
         if existing_user:
             flash(f'Името "{user_name}" вече е заето! Избери друго.', 'danger')
@@ -86,10 +84,46 @@ def dashboard():
         return redirect(url_for('login'))
 
     all_logs = FishingLog.query.all()
+
     if session['role'] == 'admin':
         bookings = Booking.query.all()
-        return render_template('admin_dashboard.html', bookings=bookings, logs=all_logs)
+        # ТОЧКА 1: Извличаме корабите и потребителите за админ панела
+        vessels = FishingVessel.query.all()
+        users = User.query.filter_by(role='user').all()
+        return render_template('admin_dashboard.html',
+                               bookings=bookings,
+                               logs=all_logs,
+                               vessels=vessels,
+                               users=users)
+
     return render_template('user_dashboard.html', all_logs=all_logs)
+
+
+# --- НОВ МАРШРУТ ПО ТОЧКА 1: РЕГИСТРАЦИЯ НА КОРАБ (АДМИН) ---
+@app.route('/admin/add-vessel', methods=['POST'])
+def add_vessel():
+    if session.get('role') != 'admin':
+        return redirect(url_for('dashboard'))
+
+    try:
+        new_vessel = FishingVessel(
+            vessel_name=request.form.get('vessel_name'),
+            external_marking=request.form.get('marking'),
+            cfr_number=request.form.get('cfr'),
+            ircs_call_sign=request.form.get('call_sign'),
+            length_overall=float(request.form.get('length', 0)),
+            gross_tonnage=float(request.form.get('tonnage', 0)),
+            engine_power=float(request.form.get('power', 0)),
+            owner_id=request.form.get('owner_id')
+        )
+        db.session.add(new_vessel)
+        db.session.commit()
+        flash('Корабът е успешно вписан в националния регистър!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('Грешка при регистрация на кораб (възможно дублиране на CFR/Маркировка)!', 'danger')
+
+    return redirect(url_for('dashboard'))
 
 
 @app.route('/book', methods=['POST'])
@@ -182,7 +216,6 @@ def inspect(log_id):
                 fine = request.form.get('fine')
                 log.fine_amount = float(fine) if fine else 0.0
                 log.inspection_note = request.form.get('note') or "Нарушение"
-                # Ако глобата е 0, се счита за легално, иначе не.
                 log.is_legal = False if log.fine_amount > 0 else True
                 flash(f'Акт #{log.id} е издаден успешно!', 'warning')
             except ValueError:
