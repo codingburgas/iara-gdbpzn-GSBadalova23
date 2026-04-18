@@ -5,28 +5,14 @@
     <title>Потребителски Панел - ИАРА</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f4f7f6; }
-        .nav { background: #003366; color: white; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; }
-        .container { max-width: 1100px; margin: auto; padding: 20px; }
-        .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 25px; }
-        #map { height: 450px; border-radius: 12px; border: 2px solid #003366; cursor: crosshair; }
-        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        .btn { background: #003366; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; transition: 0.3s; }
-        .btn:hover { background: #002244; }
-        .info-box { background: #e7f3ff; color: #003366; padding: 15px; border-radius: 8px; margin: 10px 0; font-weight: bold; border-left: 5px solid #003366; }
-        label { font-weight: bold; color: #003366; display: block; margin-top: 10px; }
-        .flash { padding: 10px; border-radius: 5px; margin-bottom: 15px; text-align: center; font-weight: bold; }
-        .success { background: #d4edda; color: #155724; }
-        .info { background: #d1ecf1; color: #0c5460; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
-    </style>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/user.css') }}">
 </head>
 <body>
     <div class="nav">
         <h2>🎣 Риболовен Портал</h2>
-        <a href="{{ url_for('logout') }}" style="color:white; text-decoration:none; font-weight:bold;">Изход</a>
+        <a href="{{ url_for('logout') }}">Изход</a>
     </div>
 
     <div class="container">
@@ -41,55 +27,40 @@
         <div class="card">
             <h3>🗺️ ГИС Карта на улова</h3>
             <div id="map"></div>
-            <div id="loc_text" class="info-box">Изберете точка от картата...</div>
+            <div id="loc_text">Изберете точка от картата...</div>
 
             <form action="{{ url_for('submit_log') }}" method="POST">
                 <input type="hidden" name="lat" id="lat">
                 <input type="hidden" name="lng" id="lng">
                 <input type="hidden" name="water_info" id="water_info">
                 <input type="text" name="fish_type" placeholder="Какво уловихте?" required>
-                <button type="submit" class="btn" style="background:#28a745;">Запиши улов</button>
+                <button type="submit" class="btn-submit" style="background:#28a745;">Запиши улов</button>
             </form>
         </div>
 
         <div class="card">
-            <h3>🚢 Моят текущ улов (Логистика)</h3>
-            <table>
+            <h3>🚢 Моят текущ улов</h3>
+            <table style="width:100%; border-collapse:collapse;">
                 <thead>
-                    <tr>
-                        <th>Риба</th>
-                        <th>Статус</th>
-                        <th>Код / Дестинация</th>
-                        <th>Действие</th>
+                    <tr style="border-bottom:2px solid #003366;">
+                        <th style="padding:10px; text-align:left;">Риба</th>
+                        <th style="padding:10px; text-align:left;">Статус</th>
+                        <th style="padding:10px; text-align:left;">Действие</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for my_log in all_logs if my_log.user_id == session['user_id'] %}
                     <tr>
-                        <td><b>{{ my_log.fish_type }}</b></td>
-                        <td>
-                            {% if my_log.status == 'At Sea' %}
-                                <span style="color:blue;">🌊 На кораб</span>
-                            {% else %}
-                                <span style="color:green;">✅ Разтоварена</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if my_log.delivery_id %}
-                                <code>{{ my_log.delivery_id }}</code><br>
-                                <small>{{ my_log.destination }}</small>
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
-                        <td>
+                        <td style="padding:10px;">{{ my_log.fish_type }}</td>
+                        <td style="padding:10px;">{{ my_log.status }}</td>
+                        <td style="padding:10px;">
                             {% if my_log.status == 'At Sea' %}
                             <form action="{{ url_for('transfer_fish', log_id=my_log.id) }}" method="POST" style="display:flex; gap:5px;">
-                                <input type="text" name="destination" placeholder="Магазин" required style="padding:5px; margin:0; width:100px;">
-                                <button type="submit" class="btn" style="padding:5px; font-size:11px; width:auto;">Предай</button>
+                                <input type="text" name="destination" placeholder="Дестинация" required style="width:auto; padding:5px; margin:0;">
+                                <button type="submit" style="width:auto; padding:5px 10px; background:#003366; color:white; border:none; border-radius:4px; cursor:pointer;">Предай</button>
                             </form>
                             {% else %}
-                                Готово
+                                <span style="color:#28a745; font-weight:bold;">Готово</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -101,19 +72,16 @@
         <div class="card">
             <h3>🎟️ Записване за събитие</h3>
             <form action="{{ url_for('book') }}" method="POST">
-                <label>Категория:</label>
                 <select name="category" id="category" onchange="updateUI()">
                     <option value="Competition">🏆 Състезание</option>
                     <option value="Social">🤝 Улов с непознати</option>
                 </select>
-
                 <input type="text" name="full_name" placeholder="Имена" required>
                 <input type="email" name="email" placeholder="Имейл" required>
                 <input type="number" name="age" placeholder="Възраст" required>
                 <input type="number" name="experience" placeholder="Опит (г)" required>
 
                 <div id="comp_ui">
-                    <label>Дата:</label>
                     <select name="comp_date">
                         <option>10 Май - Река Дунав</option>
                         <option>17 Май - Язовир Искър</option>
@@ -125,16 +93,18 @@
                     <input type="text" name="weekend" id="weekend_picker" placeholder="Избери уикенд" readonly>
                 </div>
 
-                <button type="submit" class="btn">Запази</button>
+                <button type="submit" class="btn-submit">Запази</button>
             </form>
         </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 
     <script>
+        // Инициализация на маркерите от базата данни
         const existingLogs = [
             {% for log in all_logs %}
             {
@@ -145,7 +115,10 @@
             },
             {% endfor %}
         ];
-        loadExistingMarkers(existingLogs);
+        // Функцията се вика от script.js
+        if (typeof loadExistingMarkers === "function") {
+            loadExistingMarkers(existingLogs);
+        }
     </script>
 </body>
 </html>

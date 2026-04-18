@@ -1,0 +1,67 @@
+/* Зона за графики */
+.charts-wrapper {
+    display: flex;
+    justify-content: space-around;
+    gap: 30px;
+    flex-wrap: wrap;
+    padding: 10px 0;
+}
+
+.chart-container {
+    flex: 1;
+    min-width: 300px;
+    max-width: 450px;
+    text-align: center;
+}
+
+/* Административни таблици */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+th {
+    background: #003366;
+    color: white;
+    padding: 14px;
+}
+
+td { padding: 14px; border-bottom: 1px solid #ddd; vertical-align: top; }
+
+tr:hover { background-color: #f8f9fa; }
+
+/* Баджове за статуси */
+.badge-comp { background: #ff4d4d; color: white; padding: 5px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+.badge-social { background: #28a745; color: white; padding: 5px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+.status-at-sea { color: #007bff; font-weight: bold; }
+.status-landed { color: #28a745; font-weight: bold; }
+.delivery-id { font-family: 'Courier New', monospace; background: #eee; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+
+/* Секция за инспекция и глоби */
+.fine-badge { background: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 12px; border-radius: 8px; }
+.success-badge { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 12px; border-radius: 8px; }
+
+.btn-inspect {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 11px;
+    transition: 0.3s;
+}
+
+.btn-inspect:disabled { background: #ccc; cursor: not-allowed; opacity: 0.6; }
+.btn-ok { background: #28a745 !important; opacity: 1 !important; }
+
+.inspect-input {
+    padding: 6px;
+    font-size: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    width: 100%;
+}

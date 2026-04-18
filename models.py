@@ -38,7 +38,6 @@ class FishingLog(db.Model):
     lng = db.Column(db.Float)
     log_date = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # --- ЛОГИСТИКА И ПРОСЛЕДЯЕМОСТ ---
     status = db.Column(db.String(50), default="At Sea")
     delivery_id = db.Column(db.String(20), unique=True, nullable=True)
     destination = db.Column(db.String(100), nullable=True)

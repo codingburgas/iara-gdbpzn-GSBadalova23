@@ -1,0 +1,58 @@
+#map {
+    height: 480px;
+    width: 100%;
+    border-radius: 12px;
+    border: 3px solid #003366;
+    margin-bottom: 15px;
+    z-index: 1; /* Важно за Leaflet */
+}
+/* Логистика и таблици в потребителския панел */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+th { color: #003366; font-weight: bold; }
+
+/* Форми в потребителския панел */
+.btn-submit {
+    background: #28a745;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    border: none;
+    padding: 14px;
+    border-radius: 8px;
+    width: 100%;
+    font-size: 1rem;
+}
+
+.btn-submit:hover { background: #218838; }
+.btn-submit:disabled { background: #ccc; cursor: not-allowed; }
+
+#loc_text {
+    margin-bottom: 15px;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: bold;
+    background: #e7f3ff;
+    color: #003366;
+    border-left: 5px solid #003366;
+}
+
+input[type="text"], input[type="number"], input[type="email"], select {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-sizing: border-box;
+}
