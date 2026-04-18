@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
-from models import db, User, Booking, FishingLog, FishingVessel  # Добавен FishingVessel
+from models import db, User, Booking, FishingLog, FishingVessel, CommercialPermit
 from datetime import datetime
 import uuid
 
@@ -10,11 +10,9 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
 
-# Инициализация на базата данни
 with app.app_context():
     db.create_all()
 
-# Експертна база данни за сигнали
 FISH_RULES = {
     "Есетра": "Критично застрашен вид! Уловът е абсолютно забранен (р. Дунав и Черно море).",
     "Моруна": "Забранен за улов вид! Веднага върнете рибата във водата.",
@@ -47,9 +45,8 @@ def signup():
         pwd = request.form.get('password')
         existing_user = User.query.filter_by(username=user_name).first()
         if existing_user:
-            flash(f'Името "{user_name}" вече е заето! Избери друго.', 'danger')
+            flash(f'Името "{user_name}" вече е заето!', 'danger')
             return redirect(url_for('signup'))
-
         role = 'admin' if User.query.count() == 0 else 'user'
         new_user = User(username=user_name, password=pwd, role=role)
         db.session.add(new_user)
@@ -80,31 +77,23 @@ def logout():
 
 @app.route('/dashboard')
 def dashboard():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-
+    if 'user_id' not in session: return redirect(url_for('login'))
     all_logs = FishingLog.query.all()
-
     if session['role'] == 'admin':
         bookings = Booking.query.all()
-        # ТОЧКА 1: Извличаме корабите и потребителите за админ панела
         vessels = FishingVessel.query.all()
         users = User.query.filter_by(role='user').all()
-        return render_template('admin_dashboard.html',
-                               bookings=bookings,
-                               logs=all_logs,
-                               vessels=vessels,
-                               users=users)
+        permits = CommercialPermit.query.all()
+        return render_template('admin_dashboard.html', bookings=bookings, logs=all_logs, vessels=vessels, users=users,
+                               permits=permits)
 
-    return render_template('user_dashboard.html', all_logs=all_logs)
+    my_vessels = FishingVessel.query.filter_by(owner_id=session['user_id']).all()
+    return render_template('user_dashboard.html', all_logs=all_logs, my_vessels=my_vessels)
 
 
-# --- НОВ МАРШРУТ ПО ТОЧКА 1: РЕГИСТРАЦИЯ НА КОРАБ (АДМИН) ---
 @app.route('/admin/add-vessel', methods=['POST'])
 def add_vessel():
-    if session.get('role') != 'admin':
-        return redirect(url_for('dashboard'))
-
+    if session.get('role') != 'admin': return redirect(url_for('dashboard'))
     try:
         new_vessel = FishingVessel(
             vessel_name=request.form.get('vessel_name'),
@@ -118,11 +107,30 @@ def add_vessel():
         )
         db.session.add(new_vessel)
         db.session.commit()
-        flash('Корабът е успешно вписан в националния регистър!', 'success')
-    except Exception as e:
+        flash('Корабът е успешно вписан!', 'success')
+    except:
         db.session.rollback()
-        flash('Грешка при регистрация на кораб (възможно дублиране на CFR/Маркировка)!', 'danger')
+        flash('Грешка при регистрация на кораб!', 'danger')
+    return redirect(url_for('dashboard'))
 
+
+@app.route('/admin/issue-permit', methods=['POST'])
+def issue_permit():
+    if session.get('role') != 'admin': return redirect(url_for('dashboard'))
+    try:
+        valid_date = datetime.strptime(request.form.get('valid_until'), '%Y-%m-%d')
+        new_permit = CommercialPermit(
+            permit_number=f"PERM-{uuid.uuid4().hex[:6].upper()}",
+            vessel_id=request.form.get('vessel_id'),
+            allowed_gear=request.form.get('gear'),
+            valid_until=valid_date
+        )
+        db.session.add(new_permit)
+        db.session.commit()
+        flash('Успешно издадено разрешително!', 'success')
+    except:
+        db.session.rollback()
+        flash('Грешка при издаване на разрешително!', 'danger')
     return redirect(url_for('dashboard'))
 
 
@@ -130,97 +138,76 @@ def add_vessel():
 def book():
     if 'user_id' not in session: return redirect(url_for('login'))
     cat = request.form.get('category')
-    age = int(request.form.get('age', 0))
-    exp = int(request.form.get('experience', 0))
-
-    comp_date, region, weekend, price = None, None, None, 0.0
+    age, exp = int(request.form.get('age', 0)), int(request.form.get('experience', 0))
+    comp_date, region, weekend, price = None, None, None, 10.0
     if cat == 'Competition':
         comp_date = request.form.get('comp_date')
         price = 15.0 + (exp * 1.5)
         if age < 18: price = 7.5
     else:
-        region = request.form.get('region')
-        weekend = request.form.get('weekend')
+        region, weekend = request.form.get('region'), request.form.get('weekend')
 
     new_booking = Booking(
         user_id=session['user_id'], category=cat, full_name=request.form.get('full_name'),
         email=request.form.get('email'), age=age, experience_years=exp,
-        competition_date=comp_date, price_eur=price,
-        preferred_region=region, preferred_weekend=weekend
+        competition_date=comp_date, price_eur=price, preferred_region=region, preferred_weekend=weekend
     )
     db.session.add(new_booking)
     db.session.commit()
-    flash('Успешно се записахте за събитие!', 'success')
+    flash(f'Успешно записан! Такса: {price} €', 'success')
     return redirect(url_for('dashboard'))
 
 
 @app.route('/submit-log', methods=['POST'])
 def submit_log():
     if 'user_id' not in session: return redirect(url_for('login'))
-
     fish_type = request.form.get('fish_type', '').strip().capitalize()
-    lat_val = request.form.get('lat')
-    lng_val = request.form.get('lng')
-
-    if not lat_val or not lng_val:
-        flash('Моля, изберете локация на картата!', 'danger')
+    lat, lng = request.form.get('lat'), request.form.get('lng')
+    v_id = request.form.get('vessel_id')
+    if not lat or not lng:
+        flash('Моля, изберете точка на картата!', 'danger')
         return redirect(url_for('dashboard'))
-
     log = FishingLog(
-        user_id=session['user_id'],
-        fish_type=fish_type,
-        water_info=request.form.get('water_info'),
-        lat=float(lat_val),
-        lng=float(lng_val)
+        user_id=session['user_id'], vessel_id=int(v_id) if v_id else None,
+        fish_type=fish_type, water_info=request.form.get('water_info'),
+        lat=float(lat), lng=float(lng)
     )
     db.session.add(log)
     db.session.commit()
-
     warning = FISH_RULES.get(fish_type)
     if warning:
         flash(f"👮 ИАРА Сигнал: {warning}", 'danger')
     else:
         flash('Уловът е регистриран успешно!', 'info')
-
     return redirect(url_for('dashboard'))
 
 
 @app.route('/transfer-fish/<int:log_id>', methods=['POST'])
 def transfer_fish(log_id):
     if 'user_id' not in session: return redirect(url_for('login'))
-
     log = FishingLog.query.get(log_id)
     if log and log.user_id == session['user_id']:
-        log.delivery_id = str(uuid.uuid4())[:8].upper()
-        log.destination = request.form.get('destination')
-        log.status = "Disembarked"
+        log.delivery_id, log.destination, log.status = str(uuid.uuid4())[:8].upper(), request.form.get(
+            'destination'), "Disembarked"
         db.session.commit()
-        flash(f'Рибата е прехвърлена! Код за превоз: {log.delivery_id}', 'success')
+        flash(f'Рибата е предадена! Код: {log.delivery_id}', 'success')
     return redirect(url_for('dashboard'))
 
 
 @app.route('/inspect/<int:log_id>', methods=['POST'])
 def inspect(log_id):
     if session.get('role') != 'admin': return redirect(url_for('dashboard'))
-
     log = FishingLog.query.get(log_id)
     if log:
-        status = request.form.get('status')
-        if status == 'ok':
-            log.fine_amount = 0.0
-            log.inspection_note = "Изряден улов"
-            log.is_legal = True
-            flash(f'Улов #{log.id} е отбелязан като изряден!', 'success')
+        if request.form.get('status') == 'ok':
+            log.fine_amount, log.inspection_note, log.is_legal = 0.0, "Изряден улов", True
         else:
             try:
-                fine = request.form.get('fine')
-                log.fine_amount = float(fine) if fine else 0.0
+                log.fine_amount = float(request.form.get('fine') or 0)
                 log.inspection_note = request.form.get('note') or "Нарушение"
                 log.is_legal = False if log.fine_amount > 0 else True
-                flash(f'Акт #{log.id} е издаден успешно!', 'warning')
-            except ValueError:
-                flash('Моля, въведете валидна сума за глоба!', 'danger')
-
+            except:
+                flash('Грешна сума!', 'danger')
         db.session.commit()
     return redirect(url_for('dashboard'))
 

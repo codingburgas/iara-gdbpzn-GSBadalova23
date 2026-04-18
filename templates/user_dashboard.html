@@ -25,15 +25,30 @@
 
         <div class="card">
             <h3>🗺️ ГИС Карта на улова</h3>
-            <div id="map"></div>
-            <div id="loc_text">Изберете точка от картата...</div>
+            <div id="map" style="height: 300px; border-radius: 8px; margin-bottom: 15px;"></div>
+            <div id="loc_text" style="font-size: 12px; color: #666; margin-bottom: 10px;">Изберете точка от картата...</div>
 
             <form action="{{ url_for('submit_log') }}" method="POST">
                 <input type="hidden" name="lat" id="lat">
                 <input type="hidden" name="lng" id="lng">
                 <input type="hidden" name="water_info" id="water_info">
-                <input type="text" name="fish_type" placeholder="Какво уловихте?" required>
-                <button type="submit" class="btn-submit" style="background:#28a745;">Запиши улов</button>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                    <div>
+                        <label style="font-size: 11px; font-weight: bold;">Вид риба:</label>
+                        <input type="text" name="fish_type" placeholder="напр. Шаран" required class="inspect-input" style="margin:0;">
+                    </div>
+                    <div>
+                        <label style="font-size: 11px; font-weight: bold;">Използван кораб:</label>
+                        <select name="vessel_id" class="inspect-input" style="margin:0;">
+                            <option value="">--- От брега / Ръчен улов ---</option>
+                            {% for v in my_vessels %}
+                            <option value="{{ v.id }}">🚢 {{ v.vessel_name }} ({{ v.external_marking }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn-submit" style="background:#28a745; width: 100%;">Запиши улов в дневника</button>
             </form>
         </div>
 
@@ -43,6 +58,7 @@
                 <thead>
                     <tr>
                         <th>Риба</th>
+                        <th>Кораб</th>
                         <th>Статус</th>
                         <th>Действие</th>
                     </tr>
@@ -51,15 +67,16 @@
                     {% for my_log in all_logs if my_log.user_id == session['user_id'] %}
                     <tr>
                         <td>{{ my_log.fish_type }}</td>
+                        <td>{{ my_log.vessel.vessel_name if my_log.vessel else "Бряг" }}</td>
                         <td>{{ my_log.status }}</td>
                         <td>
                             {% if my_log.status == 'At Sea' %}
                             <form action="{{ url_for('transfer_fish', log_id=my_log.id) }}" method="POST" style="display:flex; gap:5px;">
-                                <input type="text" name="destination" placeholder="Дестинация" required style="width:auto; padding:5px; margin:0;">
-                                <button type="submit" style="width:auto; padding:5px 10px; background:#003366; color:white; border:none; border-radius:4px;">Предай</button>
+                                <input type="text" name="destination" placeholder="Дестинация" required style="width:auto; padding:5px; margin:0; font-size:12px;">
+                                <button type="submit" style="width:auto; padding:5px 10px; background:#003366; color:white; border:none; border-radius:4px; font-size:12px;">Предай</button>
                             </form>
                             {% else %}
-                                <span style="color:#28a745; font-weight:bold;">Готово</span>
+                                <span style="color:#28a745; font-weight:bold;">🚛 Предадена</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -69,34 +86,31 @@
         </div>
 
         <div class="card">
-            <h3 id="event-title">🏆 Записване за състезание</h3>
-            
+            <h3 id="event-title">🏆 Записване за събитие</h3>
             <form action="{{ url_for('book') }}" method="POST">
-                <label>Изберете тип събитие:</label>
-                <select name="category" id="category" onchange="updateUI()">
+                <label>Тип събитие:</label>
+                <select name="category" id="category" onchange="updateUI()" class="inspect-input">
                     <option value="Competition">🏆 Състезание</option>
                     <option value="Social">🤝 Улов с непознати</option>
                 </select>
-
-                <input type="text" name="full_name" placeholder="Имена" required>
-                <input type="email" name="email" placeholder="Имейл" required>
-                <input type="number" name="age" placeholder="Възраст" required>
-                <input type="number" name="experience" placeholder="Опит (г)" required>
-
+                <input type="text" name="full_name" placeholder="Имена" required class="inspect-input">
+                <input type="email" name="email" placeholder="Имейл" required class="inspect-input">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <input type="number" name="age" placeholder="Възраст" required class="inspect-input">
+                    <input type="number" name="experience" placeholder="Опит (г)" required class="inspect-input">
+                </div>
                 <div id="comp_ui">
-                    <label>Дата и място:</label>
-                    <select name="comp_date">
+                    <label>Избор на турнир:</label>
+                    <select name="comp_date" class="inspect-input">
                         <option>10 Май - Река Дунав</option>
                         <option>17 Май - Язовир Искър</option>
                     </select>
                 </div>
-
                 <div id="social_ui" style="display:none;">
-                    <input type="text" name="region" placeholder="Област/Регион">
-                    <input type="text" name="weekend" id="weekend_picker" placeholder="Избери уикенд" readonly>
+                    <input type="text" name="region" placeholder="Област/Регион" class="inspect-input">
+                    <input type="text" name="weekend" id="weekend_picker" placeholder="Избери уикенд" readonly class="inspect-input">
                 </div>
-
-                <button type="submit" class="btn-submit">Потвърди записването</button>
+                <button type="submit" class="btn-submit" style="width: 100%;">Потвърди и плати такса</button>
             </form>
         </div>
     </div>
@@ -104,7 +118,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
-
     <script>
         const existingLogs = [
             {% for log in all_logs %}

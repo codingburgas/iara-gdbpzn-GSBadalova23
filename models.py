@@ -10,7 +10,6 @@ class User(db.Model):
     password = db.Column(db.String(100), nullable=False)
     role = db.Column(db.String(20), default='user')
 
-    # Връзки
     bookings = db.relationship('Booking', backref='fisher', lazy=True)
     logs = db.relationship('FishingLog', backref='fisher', lazy=True)
     vessels = db.relationship('FishingVessel', backref='owner', lazy=True)
@@ -18,18 +17,29 @@ class User(db.Model):
 
 class FishingVessel(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    vessel_name = db.Column(db.String(100), nullable=False)  # Име
-    external_marking = db.Column(db.String(50), unique=True, nullable=False)  # Маркировка
-    cfr_number = db.Column(db.String(50), unique=True, nullable=False)  # Международен номер
-    ircs_call_sign = db.Column(db.String(50))  # Позивна
-
-    # Технически параметри (от казуса)
-    length_overall = db.Column(db.Float)  # Дължина
-    gross_tonnage = db.Column(db.Float)  # Тонаж
-    engine_power = db.Column(db.Float)  # Мощност (kW)
-
-    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # Собственик
+    vessel_name = db.Column(db.String(100), nullable=False)
+    external_marking = db.Column(db.String(50), unique=True, nullable=False)
+    cfr_number = db.Column(db.String(50), unique=True, nullable=False)
+    ircs_call_sign = db.Column(db.String(50))
+    length_overall = db.Column(db.Float)
+    gross_tonnage = db.Column(db.Float)
+    engine_power = db.Column(db.Float)
+    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     is_active = db.Column(db.Boolean, default=True)
+
+    permits = db.relationship('CommercialPermit', backref='vessel', lazy=True)
+    # Връзка с уловите, направени от този кораб
+    vessel_logs = db.relationship('FishingLog', backref='vessel', lazy=True)
+
+
+class CommercialPermit(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    permit_number = db.Column(db.String(50), unique=True, nullable=False)
+    vessel_id = db.Column(db.Integer, db.ForeignKey('fishing_vessel.id'), nullable=False)
+    allowed_gear = db.Column(db.String(200), nullable=False)
+    valid_until = db.Column(db.DateTime, nullable=False)
+    issued_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_valid = db.Column(db.Boolean, default=True)
 
 
 class Booking(db.Model):
@@ -50,6 +60,10 @@ class Booking(db.Model):
 class FishingLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+
+    # Връзка с кораба (Точка 2)
+    vessel_id = db.Column(db.Integer, db.ForeignKey('fishing_vessel.id'), nullable=True)
+
     fish_type = db.Column(db.String(50))
     water_info = db.Column(db.String(500))
     lat = db.Column(db.Float)

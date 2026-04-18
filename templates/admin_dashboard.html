@@ -14,10 +14,10 @@
     </div>
 
     <div class="container">
-        {% with messages = get_flashed_messages() %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
-            {% for message in messages %}
-              <div class="flash">{{ message }}</div>
+            {% for category, message in messages %}
+              <div class="flash {{ category }}">{{ message }}</div>
             {% endfor %}
           {% endif %}
         {% endwith %}
@@ -37,49 +37,120 @@
         </div>
 
         <div class="card">
-            <h3>⚓ Вписване на нов риболовен кораб</h3>
-            <form action="{{ url_for('add_vessel') }}" method="POST" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
-                <div>
-                    <label>Име на кораба:</label>
-                    <input type="text" name="vessel_name" class="inspect-input" placeholder="напр. Света Анна" required>
-                </div>
-                <div>
-                    <label>Външна маркировка:</label>
-                    <input type="text" name="marking" class="inspect-input" placeholder="напр. БС 1234" required>
-                </div>
-                <div>
-                    <label>CFR номер:</label>
-                    <input type="text" name="cfr" class="inspect-input" placeholder="Международен номер" required>
-                </div>
-                <div>
-                    <label>Позивна (IRCS):</label>
-                    <input type="text" name="call_sign" class="inspect-input" placeholder="Позивна">
-                </div>
-                <div>
-                    <label>Дължина (m):</label>
-                    <input type="number" name="length" step="0.1" class="inspect-input" placeholder="Обща дължина">
-                </div>
-                <div>
-                    <label>Тонаж (GT):</label>
-                    <input type="number" name="tonnage" step="0.1" class="inspect-input" placeholder="Бруто тонаж">
-                </div>
-                <div>
-                    <label>Мощност (kW):</label>
-                    <input type="number" name="power" step="0.1" class="inspect-input" placeholder="Мощност двигател">
-                </div>
-                <div>
-                    <label>Собственик (User ID):</label>
+            <h3>📅 Всички записвания (Билети и Състезания)</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Категория</th>
+                        <th>Имена</th>
+                        <th>Детайли</th>
+                        <th>Цена (€)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in bookings %}
+                    <tr>
+                        <td>#{{ b.id }}</td>
+                        <td>
+                            {% if b.category == 'Competition' %}
+                                <span class="badge-comp">🏆 Състезание</span>
+                            {% else %}
+                                <span class="badge-social">🤝 Социален</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ b.full_name }}</td>
+                        <td>{{ b.competition_date if b.category == 'Competition' else b.preferred_region }}</td>
+                        <td>{{ "%.2f"|format(b.price_eur) }} €</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div class="card">
+                <h3>⚓ Вписване на кораб</h3>
+                <form action="{{ url_for('add_vessel') }}" method="POST">
+                    <input type="text" name="vessel_name" class="inspect-input" placeholder="Име на кораб" required>
+                    <div style="display: flex; gap: 5px;">
+                        <input type="text" name="marking" class="inspect-input" placeholder="Маркировка (БС 1234)" required>
+                        <input type="text" name="cfr" class="inspect-input" placeholder="CFR номер" required>
+                    </div>
+                    <input type="text" name="call_sign" class="inspect-input" placeholder="Позивна (IRCS)">
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px;">
+                        <div>
+                            <label style="font-size: 10px;">Дължина (m):</label>
+                            <input type="number" name="length" step="0.1" class="inspect-input" required>
+                        </div>
+                        <div>
+                            <label style="font-size: 10px;">Тонаж (GT):</label>
+                            <input type="number" name="tonnage" step="0.1" class="inspect-input" required>
+                        </div>
+                        <div>
+                            <label style="font-size: 10px;">Мощност (kW):</label>
+                            <input type="number" name="power" step="0.1" class="inspect-input" required>
+                        </div>
+                    </div>
+
                     <select name="owner_id" class="inspect-input" required>
                         <option value="">--- Избери собственик ---</option>
                         {% for user in users %}
-                        <option value="{{ user.id }}">{{ user.username }} (ID: {{ user.id }})</option>
+                        <option value="{{ user.id }}">👤 {{ user.username }}</option>
                         {% endfor %}
                     </select>
-                </div>
-                <div style="display: flex; align-items: flex-end;">
-                    <button type="submit" class="btn-inspect btn-ok" style="width: 100%; height: 35px; margin-bottom: 8px;">Регистрирай Кораб</button>
-                </div>
-            </form>
+                    <button type="submit" class="btn-inspect btn-ok" style="width: 100%;">Регистрирай в регистъра</button>
+                </form>
+            </div>
+
+            <div class="card" style="border-left: 5px solid #ffc107;">
+                <h3>📜 Издаване на Разрешително</h3>
+                <form action="{{ url_for('issue_permit') }}" method="POST">
+                    <select name="vessel_id" class="inspect-input" required>
+                        <option value="">--- Избери кораб ---</option>
+                        {% for v in vessels %}
+                        <option value="{{ v.id }}">{{ v.external_marking }} - {{ v.vessel_name }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="text" name="gear" class="inspect-input" placeholder="Разрешени уреди (напр. мрежи)" required>
+                    <input type="date" name="valid_until" class="inspect-input" required>
+                    <button type="submit" class="btn-inspect" style="width: 100%; background: #003366; color:white;">Издай Документ</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>📂 Регистър на действащите разрешителни</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>№ Разрешително</th>
+                        <th>Кораб</th>
+                        <th>Уреди</th>
+                        <th>Валидност</th>
+                        <th>Статус</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in permits %}
+                    <tr>
+                        <td><code class="delivery-id">{{ p.permit_number }}</code></td>
+                        <td>{{ p.vessel.external_marking }} ({{ p.vessel.vessel_name }})</td>
+                        <td>{{ p.allowed_gear }}</td>
+                        <td>До: {{ p.valid_until.strftime('%d.%m.%Y') }}</td>
+                        <td>
+                            {# Динамична проверка на датата #}
+                            {% if p.is_valid and p.valid_until.date() >= p.issued_at.today().date() %}
+                                <span class="status-landed">✅ ВАЛИДНО</span>
+                            {% else %}
+                                <span class="badge-comp" style="background: #6c757d;">🚫 ИЗТЕКЛО</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
 
         <div class="card">
@@ -87,29 +158,21 @@
             <table>
                 <thead>
                     <tr>
+                        <th>ID</th>
                         <th>Маркировка / Име</th>
                         <th>CFR Номер</th>
                         <th>Технически данни</th>
                         <th>Собственик</th>
-                        <th>Статус</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for v in vessels %}
                     <tr>
+                        <td>#{{ v.id }}</td>
                         <td><b>{{ v.external_marking }}</b><br><small>{{ v.vessel_name }}</small></td>
                         <td><span class="delivery-id">{{ v.cfr_number }}</span></td>
-                        <td>
-                            📏 {{ v.length_overall }}m | ⚖️ {{ v.gross_tonnage }}t | ⚙️ {{ v.engine_power }}kW
-                        </td>
-                        <td>ID: #{{ v.owner_id }}</td>
-                        <td>
-                            {% if v.is_active %}
-                                <span class="status-landed">✅ Активен</span>
-                            {% else %}
-                                <span class="badge-comp">🚫 Спрян</span>
-                            {% endif %}
-                        </td>
+                        <td>📐 {{ v.length_overall }}m | ⚖️ {{ v.gross_tonnage }}t | ⚙️ {{ v.engine_power }}kW</td>
+                        <td>👤 {{ v.owner.username }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -121,39 +184,34 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Рибар ID</th>
-                        <th>Улов / Водоем</th>
-                        <th>Статус / Код</th>
+                        <th>ID</th>
+                        <th>Рибар</th>
+                        <th>Улов / Кораб</th>
                         <th>🚨 Контрол</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for log in logs %}
                     <tr>
-                        <td>#{{ log.user_id }}</td>
+                        <td>#{{ log.id }}</td>
+                        <td>👤 {{ log.fisher.username }}</td>
                         <td>
                             <b>{{ log.fish_type }}</b><br>
-                            <small>{{ log.water_info }}</small>
-                        </td>
-                        <td>
-                            {% if log.status == 'At Sea' %}
-                                <span class="status-at-sea">🌊 На кораб</span>
+                            {% if log.vessel %}
+                                <span style="font-size: 11px; color: #003366;">🚢 Кораб: {{ log.vessel.vessel_name }}</span>
                             {% else %}
-                                <span class="status-landed">🚛 Разтоварена в: {{ log.destination }}</span><br>
-                                <span class="delivery-id">{{ log.delivery_id }}</span>
+                                <span style="font-size: 11px; color: #666;">👟 От брега</span>
                             {% endif %}
                         </td>
                         <td>
                             {% if log.fine_amount == 0 and not log.inspection_note %}
-                                <form action="{{ url_for('inspect', log_id=log.id) }}" method="POST" class="inspect-form" style="display:flex; flex-direction:column;">
-                                    <input type="number" name="fine" step="0.01" placeholder="Глоба (€)" class="inspect-input fine-field">
-                                    <select name="note" class="inspect-input reason-field">
-                                        <option value="" selected>--- Избери нарушение ---</option>
-                                        <option value="Улов под размер">📏 Под размер</option>
+                                <form action="{{ url_for('inspect', log_id=log.id) }}" method="POST" class="inspect-form">
+                                    <input type="number" name="fine" step="0.01" placeholder="Глоба (€)" class="inspect-input">
+                                    <select name="note" class="inspect-input">
+                                        <option value="">--- Нарушение ---</option>
+                                        <option value="Без разрешително">📜 Без разрешително</option>
                                         <option value="Забранени уреди">🕸️ Забранени уреди</option>
-                                        <option value="Над лимита">⚖️ Над лимита</option>
-                                        <option value="Забранен сезон">🚫 Забранен сезон</option>
-                                        <option value="Без билет">🎫 Без билет</option>
+                                        <option value="Под размер">📏 Под размер</option>
                                     </select>
                                     <div style="display: flex; gap: 5px;">
                                         <button type="submit" class="btn-inspect btn-act" disabled>Акт</button>
@@ -161,16 +219,9 @@
                                     </div>
                                 </form>
                             {% elif log.fine_amount > 0 %}
-                                <div class="fine-badge">
-                                    <b style="color:#dc3545;">⚠️ ИЗДАДЕН АКТ</b><br>
-                                    <b>{{ "%.2f"|format(log.fine_amount) }} €</b><br>
-                                    <small>{{ log.inspection_note }}</small>
-                                </div>
+                                <div class="fine-badge">⚠️ АКТ: {{ log.fine_amount }} €<br><small>{{ log.inspection_note }}</small></div>
                             {% else %}
-                                <div class="success-badge">
-                                    <b style="color:#28a745;">✅ ИЗРЯДЕН</b><br>
-                                    <small>Проверката е без нарушения.</small>
-                                </div>
+                                <div class="success-badge">✅ ИЗРЯДЕН</div>
                             {% endif %}
                         </td>
                     </tr>
@@ -182,18 +233,13 @@
 
     <script src="{{ url_for('static', filename='admin_charts.js') }}"></script>
     <script>
-        // Подготовка на данните за графиките
         const statsData = {
             legalCount: {{ logs|selectattr("is_legal", "equalto", true)|list|length }},
             illegalCount: {{ logs|selectattr("is_legal", "equalto", false)|list|length }},
             bookingRevenue: {{ bookings|sum(attribute='price_eur') or 0 }},
             fineRevenue: {{ logs|sum(attribute='fine_amount') or 0 }}
         };
-
-        // Извикваме инициализацията от външния файл
-        if (typeof initAdminCharts === "function") {
-            initAdminCharts(statsData);
-        }
+        if (typeof initAdminCharts === "function") { initAdminCharts(statsData); }
     </script>
 </body>
 </html>
