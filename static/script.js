@@ -1,11 +1,9 @@
-// 1. Инициализиране на картата
 var map = L.map('map').setView([42.50, 27.46], 7);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors'
 }).addTo(map);
 
-// 2. Зареждане на съществуващи маркери
 function loadExistingMarkers(logs) {
     logs.forEach(log => {
         if (log.lat && log.lng) {
@@ -20,7 +18,6 @@ function loadExistingMarkers(logs) {
     });
 }
 
-// 3. Клик върху картата за локация
 map.on('click', function(e) {
     var lat = e.latlng.lat;
     var lng = e.latlng.lng;
@@ -41,7 +38,6 @@ map.on('click', function(e) {
     });
 });
 
-// 4. ДИНАМИЧНО ОБНОВЯВАНЕ НА ИНТЕРФЕЙСА (СЪБИТИЯ)
 function updateUI() {
     const category = document.getElementById('category').value;
     const compUI = document.getElementById('comp_ui');
@@ -57,11 +53,10 @@ function updateUI() {
         compUI.style.display = 'none';
         socialUI.style.display = 'block';
         eventTitle.innerHTML = '🤝 Улов с непознати';
-        eventTitle.style.color = '#28a745'; // Зелено
+        eventTitle.style.color = '#28a745';
     }
 }
 
-// 5. ЕКСПЕРТНА ПРОВЕРКА НА РИБИТЕ
 const fishRules = {
     "Шаран": { start: [4, 15], end: [5, 31], msg: "период (15.04 - 31.05)", minSize: 30 },
     "Бяла риба": { start: [3, 15], end: [5, 15], msg: "период (15.03 - 15.05)", minSize: 45 },
@@ -106,7 +101,6 @@ if (fishInput) {
     });
 }
 
-// 6. КАЛЕНДАР (Flatpickr)
 flatpickr("#weekend_picker", {
     minDate: "today",
     disable: [date => (date.getDay() !== 0 && date.getDay() !== 6)],

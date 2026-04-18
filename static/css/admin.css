@@ -1,4 +1,3 @@
-/* Зона за графики */
 .charts-wrapper {
     display: flex;
     justify-content: space-around;
@@ -14,7 +13,6 @@
     text-align: center;
 }
 
-/* Форма за регистрация на кораби */
 .card label {
     display: block;
     font-size: 11px;
@@ -23,7 +21,6 @@
     margin-bottom: 2px;
 }
 
-/* Административни таблици */
 table {
     width: 100%;
     border-collapse: collapse;
@@ -46,14 +43,11 @@ td {
 
 tr:hover { background-color: #f8f9fa; }
 
-/* Баджове за статуси */
 .badge-comp { background: #ff4d4d; color: white; padding: 5px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; }
 .badge-social { background: #28a745; color: white; padding: 5px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; }
 .status-at-sea { color: #007bff; font-weight: bold; }
 .status-landed { color: #28a745; font-weight: bold; }
 .delivery-id { font-family: 'Courier New', monospace; background: #eee; padding: 2px 6px; border-radius: 4px; font-weight: bold; color: #333; }
-
-/* Секция за инспекция и глоби */
 .fine-badge { background: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 10px; border-radius: 8px; font-weight: bold; }
 .success-badge { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 10px; border-radius: 8px; font-weight: bold; }
 

@@ -4,9 +4,8 @@
     border-radius: 12px;
     border: 3px solid #003366;
     margin-bottom: 15px;
-    z-index: 1; /* Важно за Leaflet */
+    z-index: 1;
 }
-/* Логистика и таблици в потребителския панел */
 table {
     width: 100%;
     border-collapse: collapse;

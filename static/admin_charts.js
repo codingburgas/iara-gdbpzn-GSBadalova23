@@ -1,9 +1,4 @@
-/**
- * 📊 1. ГРАФИКИ (Chart.js)
- * Инициализира визуалната статистика в админ панела.
- */
 function initAdminCharts(data) {
-    // Графика: Изрядни срещу Нарушители (Pie Chart)
     const ctxLegal = document.getElementById('legalChart').getContext('2d');
     new Chart(ctxLegal, {
         type: 'pie',
@@ -21,7 +16,6 @@ function initAdminCharts(data) {
         }
     });
 
-    // Графика: Приходи (Bar Chart)
     const ctxMoney = document.getElementById('moneyChart').getContext('2d');
     new Chart(ctxMoney, {
         type: 'bar',
@@ -40,7 +34,6 @@ function initAdminCharts(data) {
         }
     });
 
-    // След като графиките са готови, пускаме асистента и защитата
     initInspectorAssistant();
     initFineValidation();
 }
@@ -82,7 +75,7 @@ function initInspectorAssistant() {
             }
 
             if (isViolation) {
-                fishInfoCell.style.color = "#dc3545"; // Маркира името на рибата в червено
+                fishInfoCell.style.color = "#dc3545";
                 alertDiv.style.background = "#f8d7da";
                 alertDiv.style.color = "#721c24";
                 alertDiv.innerHTML = `⚠️ СИГНАЛ: ${rule.msg}<br>ПРЕПОРЪКА: Наложете глоба.`;
@@ -102,10 +95,6 @@ function initInspectorAssistant() {
     });
 }
 
-/**
- * ⚖️ 3. ВАЛИДАЦИЯ НА ГЛОБИТЕ (Оправдано действие)
- * Предотвратява писането на глоби без избрана причина и сума.
- */
 function initFineValidation() {
     document.querySelectorAll('form[action*="/inspect"]').forEach(form => {
         const fineInput = form.querySelector('input[name="fine"]');
@@ -118,7 +107,6 @@ function initFineValidation() {
                 const hasFine = !isNaN(fineValue) && fineValue > 0;
                 const hasReason = reasonSelect.value !== "";
 
-                // Бутонът е активен само при попълнени и ДВЕТЕ полета
                 actBtn.disabled = !(hasFine && hasReason);
                 actBtn.style.opacity = actBtn.disabled ? "0.3" : "1";
                 actBtn.style.cursor = actBtn.disabled ? "not-allowed" : "pointer";
@@ -126,7 +114,7 @@ function initFineValidation() {
 
             fineInput.addEventListener('input', validate);
             reasonSelect.addEventListener('change', validate);
-            validate(); // Изпълнява се при зареждане
+            validate();
         }
     });
 }
