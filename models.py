@@ -28,7 +28,6 @@ class FishingVessel(db.Model):
     is_active = db.Column(db.Boolean, default=True)
 
     permits = db.relationship('CommercialPermit', backref='vessel', lazy=True)
-    # Връзка с уловите, направени от този кораб
     vessel_logs = db.relationship('FishingLog', backref='vessel', lazy=True)
 
 
@@ -68,6 +67,13 @@ class FishingLog(db.Model):
     water_info = db.Column(db.String(500))
     lat = db.Column(db.Float)
     lng = db.Column(db.Float)
+
+    # --- НОВО ПО ТОЧКА 3: ЕЛЕКТРОНЕН ДНЕВНИК (ERS) ---
+    start_time = db.Column(db.DateTime, nullable=True)   # Начало на операцията
+    end_time = db.Column(db.DateTime, nullable=True)     # Край на операцията
+    gear_used = db.Column(db.String(100), nullable=True) # Използван уред
+    # ------------------------------------------------
+
     log_date = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(50), default="At Sea")
     delivery_id = db.Column(db.String(20), unique=True, nullable=True)

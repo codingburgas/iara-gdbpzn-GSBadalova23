@@ -48,6 +48,31 @@
                         </select>
                     </div>
                 </div>
+
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #ddd;">
+                    <p style="font-size: 12px; font-weight: bold; margin-top: 0; color: #003366;">⏱️ Данни за риболовната операция (ERS):</p>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label style="font-size: 10px; font-weight: bold;">Начало на теглене/улов:</label>
+                            <input type="datetime-local" name="start_time" class="inspect-input" style="margin:0;">
+                        </div>
+                        <div>
+                            <label style="font-size: 10px; font-weight: bold;">Край на теглене/улов:</label>
+                            <input type="datetime-local" name="end_time" class="inspect-input" style="margin:0;">
+                        </div>
+                    </div>
+
+                    <label style="font-size: 11px; font-weight: bold; display: block; margin-top: 10px;">Използван риболовен уред:</label>
+                    <select name="gear_used" class="inspect-input" style="margin:0;">
+                        <option value="Въдица / Ръчен улов">Въдица / Ръчен улов</option>
+                        <option value="Хрилни мрежи">Хрилни мрежи</option>
+                        <option value="Пелагичен трал">Пелагичен трал</option>
+                        <option value="Дънен трал">Дънен трал</option>
+                        <option value="Парагади">Парагади</option>
+                        <option value="Гъргър">Гъргър</option>
+                        <option value="Винтери">Винтери</option>
+                    </select>
+                </div>
                 <button type="submit" class="btn-submit" style="background:#28a745; width: 100%;">Запиши улов в дневника</button>
             </form>
         </div>

@@ -140,7 +140,6 @@
                         <td>{{ p.allowed_gear }}</td>
                         <td>До: {{ p.valid_until.strftime('%d.%m.%Y') }}</td>
                         <td>
-                            {# Динамична проверка на датата #}
                             {% if p.is_valid and p.valid_until.date() >= p.issued_at.today().date() %}
                                 <span class="status-landed">✅ ВАЛИДНО</span>
                             {% else %}
@@ -180,13 +179,14 @@
         </div>
 
         <div class="card">
-            <h3>📝 Проследяемост и Инспекция</h3>
+            <h3>📝 Електронен дневник и Инспекция (ERS)</h3>
             <table>
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>Рибар</th>
                         <th>Улов / Кораб</th>
+                        <th>Времетраене</th>
+                        <th>Риболовен уред</th>
                         <th>🚨 Контрол</th>
                     </tr>
                 </thead>
@@ -194,14 +194,31 @@
                     {% for log in logs %}
                     <tr>
                         <td>#{{ log.id }}</td>
-                        <td>👤 {{ log.fisher.username }}</td>
                         <td>
                             <b>{{ log.fish_type }}</b><br>
                             {% if log.vessel %}
-                                <span style="font-size: 11px; color: #003366;">🚢 Кораб: {{ log.vessel.vessel_name }}</span>
+                                <small style="color: #003366;">🚢 {{ log.vessel.vessel_name }} ({{ log.vessel.length_overall }}m)</small>
+                                {# Проверка за липсващ дневник при кораби над 10м #}
+                                {% if log.vessel.length_overall > 10 and not log.start_time %}
+                                    <br><span style="color: #d9534f; font-size: 10px;">⚠️ Липсва ERS данни!</span>
+                                {% endif %}
                             {% else %}
-                                <span style="font-size: 11px; color: #666;">👟 От брега</span>
+                                <small style="color: #666;">👟 От брега</small>
                             {% endif %}
+                        </td>
+                        <td>
+                            {% if log.start_time and log.end_time %}
+                                <small>От: {{ log.start_time.strftime('%H:%M') }}</small><br>
+                                <small>До: {{ log.end_time.strftime('%H:%M') }}</small><br>
+                                <b style="color: #007bff;">⏱️ {{ ((log.end_time - log.start_time).seconds // 3600) }}ч. {{ (((log.end_time - log.start_time).seconds % 3600) // 60) }}мин.</b>
+                            {% else %}
+                                <span style="color: #aaa; font-size: 11px;">Няма данни</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge-social" style="background: #f1f3f5; color: #495057; border: 1px solid #dee2e6; font-size: 11px;">
+                                {{ log.gear_used if log.gear_used else "Не е посочен" }}
+                            </span>
                         </td>
                         <td>
                             {% if log.fine_amount == 0 and not log.inspection_note %}
@@ -209,13 +226,14 @@
                                     <input type="number" name="fine" step="0.01" placeholder="Глоба (€)" class="inspect-input">
                                     <select name="note" class="inspect-input">
                                         <option value="">--- Нарушение ---</option>
-                                        <option value="Без разрешително">📜 Без разрешително</option>
-                                        <option value="Забранени уреди">🕸️ Забранени уреди</option>
-                                        <option value="Под размер">📏 Под размер</option>
+                                        <option value="Несъответствие в уредите">🕸️ Грешен уред</option>
+                                        <option value="Липса на ERS дневник">📑 Липсва дневник</option>
+                                        <option value="Превишено време">⏳ Превишено време</option>
+                                        <option value="Улов под размер">📏 Под размер</option>
                                     </select>
                                     <div style="display: flex; gap: 5px;">
                                         <button type="submit" class="btn-inspect btn-act" disabled>Акт</button>
-                                        <button type="submit" name="status" value="ok" class="btn-inspect btn-ok">Изряден</button>
+                                        <button type="submit" name="status" value="ok" class="btn-inspect btn-ok">ОК</button>
                                     </div>
                                 </form>
                             {% elif log.fine_amount > 0 %}

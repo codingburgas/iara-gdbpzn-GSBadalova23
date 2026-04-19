@@ -164,21 +164,39 @@ def submit_log():
     fish_type = request.form.get('fish_type', '').strip().capitalize()
     lat, lng = request.form.get('lat'), request.form.get('lng')
     v_id = request.form.get('vessel_id')
+
+    # ПО ТОЧКА 3: Получаване на данни за време и уреди
+    start_str = request.form.get('start_time')
+    end_str = request.form.get('end_time')
+    gear = request.form.get('gear_used')
+
+    # Преобразуване към DateTime
+    start_dt = datetime.strptime(start_str, '%Y-%m-%dT%H:%M') if start_str else None
+    end_dt = datetime.strptime(end_str, '%Y-%m-%dT%H:%M') if end_str else None
+
     if not lat or not lng:
         flash('Моля, изберете точка на картата!', 'danger')
         return redirect(url_for('dashboard'))
+
     log = FishingLog(
-        user_id=session['user_id'], vessel_id=int(v_id) if v_id else None,
-        fish_type=fish_type, water_info=request.form.get('water_info'),
-        lat=float(lat), lng=float(lng)
+        user_id=session['user_id'],
+        vessel_id=int(v_id) if v_id else None,
+        fish_type=fish_type,
+        water_info=request.form.get('water_info'),
+        lat=float(lat),
+        lng=float(lng),
+        start_time=start_dt,
+        end_time=end_dt,
+        gear_used=gear
     )
     db.session.add(log)
     db.session.commit()
+
     warning = FISH_RULES.get(fish_type)
     if warning:
         flash(f"👮 ИАРА Сигнал: {warning}", 'danger')
     else:
-        flash('Уловът е регистриран успешно!', 'info')
+        flash('Дневникът е обновен успешно!', 'info')
     return redirect(url_for('dashboard'))
 
 
