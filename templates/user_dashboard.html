@@ -53,11 +53,11 @@
                     <p style="font-size: 12px; font-weight: bold; margin-top: 0; color: #003366;">⏱️ Данни за риболовната операция (ERS):</p>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                         <div>
-                            <label style="font-size: 10px; font-weight: bold;">Начало на теглене/улов:</label>
+                            <label style="font-size: 10px; font-weight: bold;">Начало:</label>
                             <input type="datetime-local" name="start_time" class="inspect-input" style="margin:0;">
                         </div>
                         <div>
-                            <label style="font-size: 10px; font-weight: bold;">Край на теглене/улов:</label>
+                            <label style="font-size: 10px; font-weight: bold;">Край:</label>
                             <input type="datetime-local" name="end_time" class="inspect-input" style="margin:0;">
                         </div>
                     </div>
@@ -116,7 +116,7 @@
                 <label>Тип събитие:</label>
                 <select name="category" id="category" onchange="updateUI()" class="inspect-input">
                     <option value="Competition">🏆 Състезание</option>
-                    <option value="Social">🤝 Улов с непознати</option>
+                    <option value="Social">🤝 Социален улов</option>
                 </select>
                 <input type="text" name="full_name" placeholder="Имена" required class="inspect-input">
                 <input type="email" name="email" placeholder="Имейл" required class="inspect-input">
@@ -124,18 +124,27 @@
                     <input type="number" name="age" placeholder="Възраст" required class="inspect-input">
                     <input type="number" name="experience" placeholder="Опит (г)" required class="inspect-input">
                 </div>
+
                 <div id="comp_ui">
-                    <label>Избор на турнир:</label>
+                    <label>Избор на турнир (Сезон 2026):</label>
                     <select name="comp_date" class="inspect-input">
-                        <option>10 Май - Река Дунав</option>
-                        <option>17 Май - Язовир Искър</option>
+                        <optgroup label="ПРЕДСТОЯЩИ">
+                            <option value="06.09.2026 - яз. Батак (Каяк Фест)">06 Септември - яз. Батак (Каяк Фест)</option>
+                            <option value="14.09.2026 - р. Марица (Zip Baits Cup)">14 Септември - р. Марица (Zip Baits Cup)</option>
+                            <option value="12.10.2026 - Гребен канал (Купа ИАРА)">12 Октомври - Гребен канал (Купа ИАРА)</option>
+                        </optgroup>
+                        <optgroup label="✅ АРХИВ" disabled>
+                            <option>10 Май - Река Дунав (Извършено)</option>
+                            <option>15 Юни - Световно първенство (Извършено)</option>
+                        </optgroup>
                     </select>
                 </div>
+
                 <div id="social_ui" style="display:none;">
                     <input type="text" name="region" placeholder="Област/Регион" class="inspect-input">
                     <input type="text" name="weekend" id="weekend_picker" placeholder="Избери уикенд" readonly class="inspect-input">
                 </div>
-                <button type="submit" class="btn-submit" style="width: 100%;">Потвърди и плати такса</button>
+                <button type="submit" class="btn-submit" style="width: 100%;">Потвърди записване</button>
             </form>
         </div>
     </div>
@@ -146,7 +155,7 @@
     <script>
         const existingLogs = [
             {% for log in all_logs %}
-            { lat: {{ log.lat }}, lng: {{ log.lng }}, fish_type: "{{ log.fish_type }}", water_info: "{{ log.water_info }}" },
+            { lat: {{ log.lat }}, lng: {{ log.lng }}, fish_type: "{{ log.fish_type }}" },
             {% endfor %}
         ];
         if (typeof loadExistingMarkers === "function") { loadExistingMarkers(existingLogs); }

@@ -44,7 +44,7 @@
                         <th>ID</th>
                         <th>Категория</th>
                         <th>Имена</th>
-                        <th>Детайли</th>
+                        <th>Детайли / Статус</th>
                         <th>Цена (€)</th>
                     </tr>
                 </thead>
@@ -60,7 +60,17 @@
                             {% endif %}
                         </td>
                         <td>{{ b.full_name }}</td>
-                        <td>{{ b.competition_date if b.category == 'Competition' else b.preferred_region }}</td>
+                        <td>
+                            <b>{{ b.competition_date if b.category == 'Competition' else b.preferred_region }}</b>
+                            {% if b.category == 'Competition' %}
+                                <br>
+                                {% if b.is_finished %}
+                                    <span style="color: #28a745; font-size: 10px; font-weight: bold;">[✅ ИЗВЪРШЕНО]</span>
+                                {% else %}
+                                    <span style="color: #007bff; font-size: 10px; font-weight: bold;">[⏳ ПРЕДСТОЯЩО]</span>
+                                {% endif %}
+                            {% endif %}
+                        </td>
                         <td>{{ "%.2f"|format(b.price_eur) }} €</td>
                     </tr>
                     {% endfor %}
@@ -198,7 +208,6 @@
                             <b>{{ log.fish_type }}</b><br>
                             {% if log.vessel %}
                                 <small style="color: #003366;">🚢 {{ log.vessel.vessel_name }} ({{ log.vessel.length_overall }}m)</small>
-                                {# Проверка за липсващ дневник при кораби над 10м #}
                                 {% if log.vessel.length_overall > 10 and not log.start_time %}
                                     <br><span style="color: #d9534f; font-size: 10px;">⚠️ Липсва ERS данни!</span>
                                 {% endif %}
