@@ -49,6 +49,11 @@ class Booking(db.Model):
     email = db.Column(db.String(100), nullable=False)
     age = db.Column(db.Integer)
     experience_years = db.Column(db.Integer)
+
+    # --- НОВО ПО ТОЧКА 4: ТЕЛК ---
+    telk_number = db.Column(db.String(50), nullable=True)
+    # ----------------------------
+
     competition_date = db.Column(db.String(100))
     price_eur = db.Column(db.Float, default=0.0)
     preferred_region = db.Column(db.String(100))
@@ -59,20 +64,16 @@ class Booking(db.Model):
 class FishingLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-
-    # Връзка с кораба (Точка 2)
     vessel_id = db.Column(db.Integer, db.ForeignKey('fishing_vessel.id'), nullable=True)
-
     fish_type = db.Column(db.String(50))
     water_info = db.Column(db.String(500))
     lat = db.Column(db.Float)
     lng = db.Column(db.Float)
 
-    # --- НОВО ПО ТОЧКА 3: ЕЛЕКТРОНЕН ДНЕВНИК (ERS) ---
-    start_time = db.Column(db.DateTime, nullable=True)   # Начало на операцията
-    end_time = db.Column(db.DateTime, nullable=True)     # Край на операцията
-    gear_used = db.Column(db.String(100), nullable=True) # Използван уред
-    # ------------------------------------------------
+    # ПО ТОЧКА 3: ERS
+    start_time = db.Column(db.DateTime, nullable=True)
+    end_time = db.Column(db.DateTime, nullable=True)
+    gear_used = db.Column(db.String(100), nullable=True)
 
     log_date = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(50), default="At Sea")

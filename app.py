@@ -32,9 +32,11 @@ FISH_RULES = {
     "Скобар": "Минимален размер: 20 см."
 }
 
+
 @app.route('/')
 def index():
     return render_template('index.html')
+
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -53,6 +55,7 @@ def signup():
         return redirect(url_for('login'))
     return render_template('signup.html')
 
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -65,10 +68,12 @@ def login():
         flash('Грешно име или парола!', 'danger')
     return render_template('login.html')
 
+
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('index'))
+
 
 @app.route('/dashboard')
 def dashboard():
@@ -76,7 +81,7 @@ def dashboard():
     all_logs = FishingLog.query.all()
     bookings = Booking.query.all()
 
-    # --- НОВАТА ПИТОН ЛОГИКА ЗА СТАТУСИТЕ ---
+    # --- ПИТОН ЛОГИКА ЗА СТАТУСИТЕ НА СЪСТЕЗАНИЯТА ---
     for b in bookings:
         if b.category == 'Competition':
             date_str = str(b.competition_date)
@@ -89,10 +94,12 @@ def dashboard():
         vessels = FishingVessel.query.all()
         users = User.query.filter_by(role='user').all()
         permits = CommercialPermit.query.all()
-        return render_template('admin_dashboard.html', bookings=bookings, logs=all_logs, vessels=vessels, users=users, permits=permits)
+        return render_template('admin_dashboard.html', bookings=bookings, logs=all_logs, vessels=vessels, users=users,
+                               permits=permits)
 
     my_vessels = FishingVessel.query.filter_by(owner_id=session['user_id']).all()
     return render_template('user_dashboard.html', all_logs=all_logs, my_vessels=my_vessels)
+
 
 @app.route('/admin/add-vessel', methods=['POST'])
 def add_vessel():
@@ -116,6 +123,7 @@ def add_vessel():
         flash('Грешка при регистрация на кораб!', 'danger')
     return redirect(url_for('dashboard'))
 
+
 @app.route('/admin/issue-permit', methods=['POST'])
 def issue_permit():
     if session.get('role') != 'admin': return redirect(url_for('dashboard'))
@@ -135,28 +143,56 @@ def issue_permit():
         flash('Грешка при издаване на разрешително!', 'danger')
     return redirect(url_for('dashboard'))
 
+
 @app.route('/book', methods=['POST'])
 def book():
     if 'user_id' not in session: return redirect(url_for('login'))
     cat = request.form.get('category')
-    age, exp = int(request.form.get('age', 0)), int(request.form.get('experience', 0))
-    comp_date, region, weekend, price = None, None, None, 10.0
+    age = int(request.form.get('age', 0))
+    exp = int(request.form.get('experience', 0))
+    telk = request.form.get('telk_number', '').strip()
+
+    # --- ИНТЕЛИГЕНТЕН АЛГОРИТЪМ ЗА ЦЕНИ (КОРИГИРАН ЗА ПЕНСИОНЕРИ) ---
+    # 1. ТЕЛК винаги е 0€
+    if telk:
+        price = 0.0
+        flash(f'Издаден безплатен билет (ТЕЛК №{telk})', 'success')
+
+    # 2. Непълнолетни винаги са 0€
+    elif age < 18:
+        price = 0.0
+        flash('Издаден безплатен билет за непълнолетен', 'info')
+
+    # 3. Пенсионери (65+) винаги са точно 5€ (без допълнителни такси)
+    elif age >= 65:
+        price = 5.0
+        flash('Приложено фиксирано намаление за пенсионер (5.00 €)', 'info')
+
+    # 4. Всички останали
+    else:
+        price = 10.0
+        # Само за редовната категория добавяме такса за състезание и опит
+        if cat == 'Competition':
+            price += 5.0 + (exp * 0.5)
+
     if cat == 'Competition':
         comp_date = request.form.get('comp_date')
-        price = 15.0 + (exp * 1.5)
-        if age < 18: price = 7.5
+        region, weekend = None, None
     else:
+        comp_date = None
         region, weekend = request.form.get('region'), request.form.get('weekend')
 
     new_booking = Booking(
         user_id=session['user_id'], category=cat, full_name=request.form.get('full_name'),
         email=request.form.get('email'), age=age, experience_years=exp,
+        telk_number=telk if telk else None,
         competition_date=comp_date, price_eur=price, preferred_region=region, preferred_weekend=weekend
     )
     db.session.add(new_booking)
     db.session.commit()
-    flash(f'Успешно записан! Такса: {price} €', 'success')
+    flash(f'Записването е успешно! Крайна цена: {price} €', 'success')
     return redirect(url_for('dashboard'))
+
 
 @app.route('/submit-log', methods=['POST'])
 def submit_log():
@@ -165,7 +201,8 @@ def submit_log():
     lat, lng = request.form.get('lat'), request.form.get('lng')
     v_id = request.form.get('vessel_id')
 
-    start_str, end_str, gear = request.form.get('start_time'), request.form.get('end_time'), request.form.get('gear_used')
+    start_str, end_str, gear = request.form.get('start_time'), request.form.get('end_time'), request.form.get(
+        'gear_used')
     start_dt = datetime.strptime(start_str, '%Y-%m-%dT%H:%M') if start_str else None
     end_dt = datetime.strptime(end_str, '%Y-%m-%dT%H:%M') if end_str else None
 
@@ -182,19 +219,24 @@ def submit_log():
     db.session.commit()
 
     warning = FISH_RULES.get(fish_type)
-    if warning: flash(f"👮 ИАРА Сигнал: {warning}", 'danger')
-    else: flash('Дневникът е обновен успешно!', 'info')
+    if warning:
+        flash(f"👮 ИАРА Сигнал: {warning}", 'danger')
+    else:
+        flash('Дневникът е обновен успешно!', 'info')
     return redirect(url_for('dashboard'))
+
 
 @app.route('/transfer-fish/<int:log_id>', methods=['POST'])
 def transfer_fish(log_id):
     if 'user_id' not in session: return redirect(url_for('login'))
     log = FishingLog.query.get(log_id)
     if log and log.user_id == session['user_id']:
-        log.delivery_id, log.destination, log.status = str(uuid.uuid4())[:8].upper(), request.form.get('destination'), "Disembarked"
+        log.delivery_id, log.destination, log.status = str(uuid.uuid4())[:8].upper(), request.form.get(
+            'destination'), "Disembarked"
         db.session.commit()
         flash(f'Рибата е предадена! Код: {log.delivery_id}', 'success')
     return redirect(url_for('dashboard'))
+
 
 @app.route('/inspect/<int:log_id>', methods=['POST'])
 def inspect(log_id):
@@ -212,6 +254,7 @@ def inspect(log_id):
                 flash('Грешна сума!', 'danger')
         db.session.commit()
     return redirect(url_for('dashboard'))
+
 
 if __name__ == '__main__':
     app.run(debug=True)

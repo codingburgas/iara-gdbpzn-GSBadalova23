@@ -43,7 +43,7 @@
                     <tr>
                         <th>ID</th>
                         <th>Категория</th>
-                        <th>Имена</th>
+                        <th>Имена и Статус</th>
                         <th>Детайли / Статус</th>
                         <th>Цена (€)</th>
                     </tr>
@@ -59,7 +59,16 @@
                                 <span class="badge-social">🤝 Социален</span>
                             {% endif %}
                         </td>
-                        <td>{{ b.full_name }}</td>
+                        <td>
+                            <b>{{ b.full_name }}</b>
+                            {# ДОБАВЕНО ПО ТОЧКА 4: ТЕЛК и Пенсионер визуализация #}
+                            {% if b.telk_number %}
+                                <br><span class="badge-social" style="background:#007bff; font-size:9px;">♿ ТЕЛК: {{ b.telk_number }}</span>
+                            {% elif b.age >= 65 %}
+                                <br><span class="badge-social" style="background:#6f42c1; font-size:9px;">👴 Пенсионер</span>
+                            {% endif %}
+                            <small style="display:block; color:#666;">({{ b.age }} г.)</small>
+                        </td>
                         <td>
                             <b>{{ b.competition_date if b.category == 'Competition' else b.preferred_region }}</b>
                             {% if b.category == 'Competition' %}
