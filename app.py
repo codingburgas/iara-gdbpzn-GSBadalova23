@@ -1,5 +1,5 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
-from models import db, User, Booking, FishingLog, FishingVessel, CommercialPermit
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+from models import db, User, Booking, FishingLog, FishingVessel, CommercialPermit, PollutionReport
 from datetime import datetime
 import uuid
 
@@ -80,8 +80,8 @@ def dashboard():
     if 'user_id' not in session: return redirect(url_for('login'))
     all_logs = FishingLog.query.all()
     bookings = Booking.query.all()
+    pollution_reports = PollutionReport.query.order_by(PollutionReport.report_date.desc()).all()
 
-    # --- ПИТОН ЛОГИКА ЗА СТАТУСИТЕ НА СЪСТЕЗАНИЯТА ---
     for b in bookings:
         if b.category == 'Competition':
             date_str = str(b.competition_date)
@@ -95,10 +95,40 @@ def dashboard():
         users = User.query.filter_by(role='user').all()
         permits = CommercialPermit.query.all()
         return render_template('admin_dashboard.html', bookings=bookings, logs=all_logs, vessels=vessels, users=users,
-                               permits=permits)
+                               permits=permits, pollution_reports=pollution_reports)
 
     my_vessels = FishingVessel.query.filter_by(owner_id=session['user_id']).all()
     return render_template('user_dashboard.html', all_logs=all_logs, my_vessels=my_vessels)
+
+
+@app.route('/api/report-pollution', methods=['POST'])
+def api_report_pollution():
+    if 'user_id' not in session: return jsonify({"error": "Unauthorized"}), 401
+    data = request.json
+    try:
+        new_report = PollutionReport(
+            user_id=session['user_id'],
+            description=data.get('description'),
+            lat=data.get('lat'),
+            lng=data.get('lng')
+        )
+        db.session.add(new_report)
+        db.session.commit()
+        return jsonify({"status": "success"}), 200
+    except:
+        return jsonify({"status": "error"}), 500
+
+
+# --- НОВ МАРШРУТ ЗА ПРОМЯНА СТАТУСА НА СИГНАЛ ---
+@app.route('/admin/resolve-report/<int:report_id>', methods=['POST'])
+def resolve_report(report_id):
+    if session.get('role') != 'admin': return redirect(url_for('dashboard'))
+    report = PollutionReport.query.get(report_id)
+    if report:
+        report.status = 'Resolved'
+        db.session.commit()
+        flash('Сигналът е маркиран като проверен!', 'success')
+    return redirect(url_for('dashboard'))
 
 
 @app.route('/admin/add-vessel', methods=['POST'])
@@ -152,26 +182,17 @@ def book():
     exp = int(request.form.get('experience', 0))
     telk = request.form.get('telk_number', '').strip()
 
-    # --- ИНТЕЛИГЕНТЕН АЛГОРИТЪМ ЗА ЦЕНИ (КОРИГИРАН ЗА ПЕНСИОНЕРИ) ---
-    # 1. ТЕЛК винаги е 0€
     if telk:
         price = 0.0
         flash(f'Издаден безплатен билет (ТЕЛК №{telk})', 'success')
-
-    # 2. Непълнолетни винаги са 0€
     elif age < 18:
         price = 0.0
         flash('Издаден безплатен билет за непълнолетен', 'info')
-
-    # 3. Пенсионери (65+) винаги са точно 5€ (без допълнителни такси)
     elif age >= 65:
         price = 5.0
         flash('Приложено фиксирано намаление за пенсионер (5.00 €)', 'info')
-
-    # 4. Всички останали
     else:
         price = 10.0
-        # Само за редовната категория добавяме такса за състезание и опит
         if cat == 'Competition':
             price += 5.0 + (exp * 0.5)
 

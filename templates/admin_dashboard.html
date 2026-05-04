@@ -36,6 +36,54 @@
             </div>
         </div>
 
+        <!-- --- СЕКЦИЯ ЗА ЕКОЛОГИЧНИ СИГНАЛИ --- -->
+        <div class="card" style="border-top: 5px solid #ff9800;">
+            <h3>📢 Екологични сигнали и ГИС Мониторинг</h3>
+            <p style="font-size: 12px; color: #666;">Всички сигнали за замърсяване и нередности, подадени от мобилното приложение в реално време.</p>
+            <table>
+                <thead>
+                    <tr style="background: #fff3e0;">
+                        <th>Дата</th>
+                        <th>Подател</th>
+                        <th>Описание на проблема</th>
+                        <th>Локация (ГИС)</th>
+                        <th>Статус</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for report in pollution_reports %}
+                    <tr>
+                        <td>{{ report.report_date.strftime('%d.%m.%Y %H:%M') }}</td>
+                        <td>👤 {{ report.reporter.username }}</td>
+                        <td><b style="color: #d35400;">{{ report.description }}</b></td>
+                        <td>
+                            <a href="https://www.google.com/maps?q={{ report.lat }},{{ report.lng }}" target="_blank" style="text-decoration: none;">
+                                📍 {{ report.lat|round(4) }}, {{ report.lng|round(4) }}
+                            </a>
+                        </td>
+                        <td>
+                            {% if report.status == 'Pending' %}
+                                <form action="{{ url_for('resolve_report', report_id=report.id) }}" method="POST" style="display:inline;">
+                                    <button type="submit" class="badge-comp" style="background: #f39c12; border:none; cursor:pointer; color:white; padding: 5px 10px; border-radius: 4px; font-weight: bold;">
+                                        ⏳ ОЧАКВА ПРОВЕРКА
+                                    </button>
+                                </form>
+                            {% else %}
+                                <span class="status-landed" style="background: #28a745; color:white; padding: 5px 10px; border-radius: 4px; font-weight: bold;">
+                                    ✅ ПРОВЕРЕН
+                                </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: #aaa;">Няма постъпили екологични сигнали.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
         <div class="card">
             <h3>📅 Всички записвания (Билети и Състезания)</h3>
             <table>
@@ -61,7 +109,6 @@
                         </td>
                         <td>
                             <b>{{ b.full_name }}</b>
-                            {# ДОБАВЕНО ПО ТОЧКА 4: ТЕЛК и Пенсионер визуализация #}
                             {% if b.telk_number %}
                                 <br><span class="badge-social" style="background:#007bff; font-size:9px;">♿ ТЕЛК: {{ b.telk_number }}</span>
                             {% elif b.age >= 65 %}
@@ -250,7 +297,7 @@
                                         <option value="Улов под размер">📏 Под размер</option>
                                     </select>
                                     <div style="display: flex; gap: 5px;">
-                                        <button type="submit" class="btn-inspect btn-act" disabled>Акт</button>
+                                        <button type="submit" class="btn-inspect btn-act">Акт</button>
                                         <button type="submit" name="status" value="ok" class="btn-inspect btn-ok">ОК</button>
                                     </div>
                                 </form>
