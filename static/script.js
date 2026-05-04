@@ -1,33 +1,47 @@
 // 1. ИНИЦИАЛИЗАЦИЯ НА КАРТАТА
-var map = L.map('map').setView([41.63, 25.45], 11); // Центрирано към яз. Студен кладенец
+var map = L.map('map').setView([42.60, 25.20], 7);
+var currentMarker = null; // Глобална променлива за текущия маркер при клик
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors'
 }).addTo(map);
 
-// 2. ЗАРЕЖДАНЕ НА МАРКЕРИ (Запазено)
+// 2. ЗАРЕЖДАНЕ НА СЪЩЕСТВУВАЩИ МАРКЕРИ (С НАВИГАЦИЯ)
 function loadExistingMarkers(logs) {
     if (!logs) return;
     logs.forEach(log => {
         if (log.lat && log.lng) {
             const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${log.lat},${log.lng}`;
             L.marker([log.lat, log.lng]).addTo(map)
-                .bindPopup(`<b>🐟 ${log.fish_type}</b><br><small>${log.water_info}</small><br><a href="${navUrl}" target="_blank">🚗 Навигация</a>`);
+                .bindPopup(`
+                    <div style="text-align:center;">
+                        <b style="color:#003366;">🐟 ${log.fish_type}</b><br>
+                        <small>${log.water_info}</small><br><br>
+                        <a href="${navUrl}" target="_blank" 
+                           style="background:#28a745; color:white; padding:5px 10px; text-decoration:none; border-radius:4px; font-size:11px; display:inline-block;">
+                           🚗 Навигация до тук
+                        </a>
+                    </div>
+                `);
         }
     });
 }
 
-// 3. УМНА ФУНКЦИЯ ЗА ПРОВЕРКА НА ВОДА (С ДВОЕН ФИЛТЪР)
+// 3. ПОМОЩНА ФУНКЦИЯ ЗА ПРОВЕРКА НА ВОДА (С ВИСОКА ТОЧНОСТ)
 async function checkWaterSource(lat, lng) {
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=bg`;
     try {
-        const response = await fetch(url, { headers: { 'User-Agent': 'IARA_Water_Validation_V9' } });
+        const response = await fetch(url, { headers: { 'User-Agent': 'IARA_Master_System_V11' } });
         const data = await response.json();
         let a = data.address || {};
         let displayName = (data.display_name || "").toLowerCase();
 
-        // Списък с ключови думи за водоеми в България
-        const waterKeywords = ["река", "язовир", "езеро", "канал", "блато", "море", "залив", "арда", "студен кладенец", "кърджали", "вода", "water", "reservoir", "lake"];
+        // Списък с ключови думи за всички български водоеми
+        const waterKeywords = [
+            "река", "язовир", "езеро", "канал", "блато", "море", "залив", "тунджа",
+            "копринка", "жребчево", "искър", "доспат", "батак", "въча", "огоста", "вая", "арда", "студен кладенец",
+            "river", "lake", "reservoir", "canal", "sea", "water", "natural", "bay"
+        ];
 
         let waterTag = a.river || a.lake || a.reservoir || a.canal || a.sea || a.bay || a.water || a.natural || "";
         const hasKeyword = waterKeywords.some(key => displayName.includes(key));
@@ -35,26 +49,30 @@ async function checkWaterSource(lat, lng) {
 
         return { isWater, data, waterName: waterTag || (hasKeyword ? "воден обект" : "") };
     } catch (e) {
-        return { isWater: true, data: { address: {} }, waterName: "Координати" };
+        // При грешка на сървъра позволяваме запис, за да не блокираме потребителя
+        return { isWater: true, data: { address: {} }, waterName: "Локация" };
     }
 }
 
-// 4. КЛИК ВЪРХУ КАРТАТА
+// 4. КЛИК ВЪРХУ КАРТАТА (МАРКЕР + НАВИГАЦИЯ + ГИС ЗАЩИТА)
 map.on('click', async function(e) {
     var lat = e.latlng.lat;
     var lng = e.latlng.lng;
     let locBox = document.getElementById('loc_text');
     let mainSubmitBtn = document.querySelector('button[type="submit"]');
 
-    locBox.innerHTML = "⏳ Проверка на водоема...";
+    // Изчистваме стария временен маркер
+    if (currentMarker) { map.removeLayer(currentMarker); }
+
+    locBox.innerHTML = "⏳ Проверка на терена и GPS...";
     locBox.style.background = "#fff3e0";
 
-    // Опит 1: Точно на мястото
+    // Първи опит за проверка
     let result = await checkWaterSource(lat, lng);
 
-    // Опит 2: Ако каже суша (като на снимката ти), пробваме с малко изместване
+    // Втори опит с радиус на толерантност (за тесни реки)
     if (!result.isWater) {
-        result = await checkWaterSource(lat + 0.0004, lng + 0.0004);
+        result = await checkWaterSource(lat + 0.0003, lng + 0.0003);
     }
 
     if (!result.isWater) {
@@ -64,14 +82,33 @@ map.on('click', async function(e) {
         if (mainSubmitBtn) mainSubmitBtn.disabled = true;
     } else {
         let waterLabel = result.waterName || "Водоем";
-        let place = result.data.address.city || result.data.address.village || result.data.address.town || result.data.address.municipality || "България";
+        let place = result.data.address.city || result.data.address.village || result.data.address.town || "България";
 
-        // Поправка на имената за Студен кладенец / Арда
-        if (result.data.display_name.toLowerCase().includes("студен кладенец")) waterLabel = "яз. Студен кладенец";
-        else if (result.data.display_name.toLowerCase().includes("арда")) waterLabel = "р. Арда";
+        // Специална корекция за големи обекти
+        let dName = result.data.display_name.toLowerCase();
+        if (dName.includes("студен кладенец")) waterLabel = "яз. Студен кладенец";
+        else if (dName.includes("копринка")) waterLabel = "яз. Копринка";
+        else if (dName.includes("искър")) waterLabel = "яз. Искър";
+        else if (dName.includes("арда")) waterLabel = "р. Арда";
+        else if (dName.includes("тунджа")) waterLabel = "р. Тунджа";
 
-        let info = `📍 Място: ${waterLabel.charAt(0).toUpperCase() + waterLabel.slice(1)} (район ${place})`;
+        let info = `📍 Място: ${waterLabel.charAt(0).toUpperCase() + waterLabel.slice(1)} (${place})`;
 
+        // СЪЗДАВАНЕ НА НОВ МАРКЕР С НАВИГАЦИЯ
+        const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+        currentMarker = L.marker([lat, lng]).addTo(map)
+            .bindPopup(`
+                <div style="text-align:center;">
+                    <b style="color:#007bff;">🎯 Нова локация</b><br>
+                    <small>${info}</small><br><br>
+                    <a href="${navUrl}" target="_blank" 
+                       style="background:#007bff; color:white; padding:5px 10px; text-decoration:none; border-radius:4px; font-size:11px; display:inline-block;">
+                       🚗 Навигация до тук
+                    </a>
+                </div>
+            `).openPopup();
+
+        // Попълване на скритите полета във формата
         document.getElementById('lat').value = lat;
         document.getElementById('lng').value = lng;
         document.getElementById('water_info').value = info;
@@ -82,7 +119,7 @@ map.on('click', async function(e) {
     }
 });
 
-// 5. UI ПРЕВКЛЮЧВАНЕ (Запазено)
+// 5. ПРЕВКЛЮЧВАНЕ НА ИНТЕРФЕЙСА (Запазено)
 function updateUI() {
     const category = document.getElementById('category').value;
     const compUI = document.getElementById('comp_ui');
@@ -106,8 +143,8 @@ const fishRules = {
     "Бяла риба": { start: [3, 15], end: [5, 15], msg: "период (15.03 - 15.05)", minSize: 45 },
     "Щука": { start: [2, 1], end: [4, 30], msg: "период (01.02 - 30.04)", minSize: 35 },
     "Калкан": { start: [4, 15], end: [6, 15], msg: "период (15.04 - 15.06)", minSize: 45 },
-    "Есетра": { permanent: true, msg: "🚨 ЗАБРАНЕН ВИД!" },
-    "Моруна": { permanent: true, msg: "🚨 ЗАБРАНЕН ВИД!" }
+    "Есетра": { permanent: true, msg: "🚨 ЗАБРАНЕН ВИД! Пълна защита." },
+    "Моруна": { permanent: true, msg: "🚨 ЗАБРАНЕН ВИД! Пълна защита." }
 };
 
 const fishInput = document.querySelector('input[name="fish_type"]');
