@@ -12,7 +12,6 @@ class User(db.Model):
     bookings = db.relationship('Booking', backref='fisher', lazy=True)
     logs = db.relationship('FishingLog', backref='fisher', lazy=True)
     vessels = db.relationship('FishingVessel', backref='owner', lazy=True)
-    # Добавена връзка към сигналите
     reports = db.relationship('PollutionReport', backref='reporter', lazy=True)
 
 class FishingVessel(db.Model):
@@ -73,7 +72,11 @@ class FishingLog(db.Model):
     inspection_note = db.Column(db.String(200), nullable=True)
     is_legal = db.Column(db.Boolean, default=True)
 
-# --- НОВ МОДЕЛ ЗА ЕКОЛОГИЧНИ СИГНАЛИ ---
+    # --- НОВО: ДИГИТАЛЕН ДНЕВНИК И СОЦИАЛЕН ЕЛЕМЕНТ ---
+    fish_image_url = db.Column(db.String(500), nullable=True)
+    tackle_info = db.Column(db.String(200), nullable=True)
+    is_public = db.Column(db.Boolean, default=False)
+
 class PollutionReport(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
@@ -81,4 +84,4 @@ class PollutionReport(db.Model):
     lat = db.Column(db.Float, nullable=False)
     lng = db.Column(db.Float, nullable=False)
     report_date = db.Column(db.DateTime, default=datetime.utcnow)
-    status = db.Column(db.String(50), default="Pending") # Pending, Investigating, Resolved
+    status = db.Column(db.String(50), default="Pending")

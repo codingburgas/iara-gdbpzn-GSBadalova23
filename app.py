@@ -1,12 +1,21 @@
+import os
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from models import db, User, Booking, FishingLog, FishingVessel, CommercialPermit, PollutionReport
+from sqlalchemy import func
 from datetime import datetime
+from werkzeug.utils import secure_filename
 import uuid
 
 app = Flask(__name__)
 app.secret_key = 'iara_final_ultra_2026'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///iara_pro_v3.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Конфигурация за качване на снимки
+UPLOAD_FOLDER = 'static/uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
 
 db.init_app(app)
 
@@ -78,6 +87,7 @@ def logout():
 @app.route('/dashboard')
 def dashboard():
     if 'user_id' not in session: return redirect(url_for('login'))
+    user_id = session['user_id']
     all_logs = FishingLog.query.all()
     bookings = Booking.query.all()
     pollution_reports = PollutionReport.query.order_by(PollutionReport.report_date.desc()).all()
@@ -90,6 +100,16 @@ def dashboard():
             else:
                 b.is_finished = False
 
+    # --- ЛИЧНА СТАТИСТИКА ЗА ПОТРЕБИТЕЛЯ ---
+    personal_stats = db.session.query(
+        FishingLog.fish_type, func.count(FishingLog.id)
+    ).filter_by(user_id=user_id).group_by(FishingLog.fish_type).all()
+
+    top_spots = db.session.query(
+        FishingLog.water_info, func.count(FishingLog.id)
+    ).filter_by(user_id=user_id).group_by(FishingLog.water_info).order_by(func.count(FishingLog.id).desc()).limit(
+        3).all()
+
     if session['role'] == 'admin':
         vessels = FishingVessel.query.all()
         users = User.query.filter_by(role='user').all()
@@ -97,8 +117,9 @@ def dashboard():
         return render_template('admin_dashboard.html', bookings=bookings, logs=all_logs, vessels=vessels, users=users,
                                permits=permits, pollution_reports=pollution_reports)
 
-    my_vessels = FishingVessel.query.filter_by(owner_id=session['user_id']).all()
-    return render_template('user_dashboard.html', all_logs=all_logs, my_vessels=my_vessels)
+    my_vessels = FishingVessel.query.filter_by(owner_id=user_id).all()
+    return render_template('user_dashboard.html', all_logs=all_logs, my_vessels=my_vessels, stats=personal_stats,
+                           spots=top_spots)
 
 
 @app.route('/api/report-pollution', methods=['POST'])
@@ -119,7 +140,6 @@ def api_report_pollution():
         return jsonify({"status": "error"}), 500
 
 
-# --- НОВ МАРШРУТ ЗА ПРОМЯНА СТАТУСА НА СИГНАЛ ---
 @app.route('/admin/resolve-report/<int:report_id>', methods=['POST'])
 def resolve_report(report_id):
     if session.get('role') != 'admin': return redirect(url_for('dashboard'))
@@ -218,6 +238,14 @@ def book():
 @app.route('/submit-log', methods=['POST'])
 def submit_log():
     if 'user_id' not in session: return redirect(url_for('login'))
+
+    # 1. Обработка на снимката (НОВО)
+    file = request.files.get('fish_photo')
+    filename = None
+    if file and file.filename != '':
+        filename = secure_filename(f"{uuid.uuid4().hex}_{file.filename}")
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+
     fish_type = request.form.get('fish_type', '').strip().capitalize()
     lat, lng = request.form.get('lat'), request.form.get('lng')
     v_id = request.form.get('vessel_id')
@@ -234,7 +262,9 @@ def submit_log():
     log = FishingLog(
         user_id=session['user_id'], vessel_id=int(v_id) if v_id else None,
         fish_type=fish_type, water_info=request.form.get('water_info'),
-        lat=float(lat), lng=float(lng), start_time=start_dt, end_time=end_dt, gear_used=gear
+        lat=float(lat), lng=float(lng), start_time=start_dt, end_time=end_dt, gear_used=gear,
+        fish_image_url=filename, tackle_info=request.form.get('tackle_info'),
+        is_public=True if request.form.get('is_public') == 'on' else False
     )
     db.session.add(log)
     db.session.commit()

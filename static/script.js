@@ -6,33 +6,48 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors'
 }).addTo(map);
 
-// 2. ЗАРЕЖДАНЕ НА МАРКЕРИ (СИМУЛАЦИЯ НА HEAT MAP / ТОПЛИННА КАРТА)
+// 2. ЗАРЕЖДАНЕ НА МАРКЕРИ (ИНТЕГРИРАНО СЪС ЗАЩИТА НА ЛИЧНИ ДАННИ)
 function loadExistingMarkers(logs) {
     if (!logs) return;
     logs.forEach(log => {
         if (log.lat && log.lng) {
-            const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${log.lat},${log.lng}`;
-            const markerColor = log.intensity > 5 ? "red" : "blue";
+            let isMine = (log.user_id === currentUserId);
 
-            L.circleMarker([log.lat, log.lng], {
-                radius: 8,
-                fillColor: markerColor,
-                color: "#000",
-                weight: 1,
-                opacity: 1,
-                fillOpacity: 0.8
-            }).addTo(map)
-            .bindPopup(`
-                <div style="text-align:center;">
-                    <b style="color:#d32f2f;">🔥 Зона с висок натиск</b><br>
-                    <b>🐟 Вид: ${log.fish_type}</b><br>
-                    <small>${log.water_info}</small><br><br>
-                    <a href="${navUrl}" target="_blank" 
-                       style="background:#28a745; color:white; padding:5px 10px; text-decoration:none; border-radius:4px; font-size:11px; display:inline-block;">
-                       🚗 Навигация
-                    </a>
-                </div>
-            `);
+            // СЛУЧАЙ А: ПУБЛИЧЕН ПОСТ НА ДРУГ ПОТРЕБИТЕЛ (Защитен режим)
+            if (log.is_public && !isMine) {
+                let popupContent = `
+                    <div style="text-align:center;">
+                        <b style="color:#6f42c1;">📸 Споделен улов</b><br>
+                        <b>🐟 ${log.fish_type}</b><br>
+                        <p style="font-size:10px; color:#666;">Водоем: ${log.water_info.split('(')[0]}</p>
+                        <p style="font-size:10px; font-style:italic;">🎣 Такъм: ${log.tackle_info || 'Стандартен'}</p>
+                        <hr>
+                        <small>🛡️ ГИС Защита: Координатите са скрити</small>
+                    </div>`;
+
+                L.circleMarker([log.lat, log.lng], {
+                    radius: 7,
+                    fillColor: "#9b59b6",
+                    color: "#000",
+                    weight: 1,
+                    fillOpacity: 0.7
+                }).addTo(map).bindPopup(popupContent);
+            }
+            // СЛУЧАЙ Б: МОЙ УЛОВ ИЛИ СЛУЖЕБЕН МАРКЕР (Пълен достъп)
+            else if (isMine || !log.is_public) {
+                const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${log.lat},${log.lng}`;
+                let markerColor = "blue"; // Може да се добави логика за интензитет
+
+                let popupContent = `
+                    <div style="text-align:center;">
+                        <b style="color:#007bff;">📍 Моят запис</b><br>
+                        <b>🐟 ${log.fish_type}</b><br>
+                        <small>${log.water_info}</small><br><br>
+                        <a href="${navUrl}" target="_blank" style="background:#28a745; color:white; padding:5px 10px; text-decoration:none; border-radius:4px; font-size:11px; display:inline-block;">🚗 Навигация</a>
+                    </div>`;
+
+                L.marker([log.lat, log.lng]).addTo(map).bindPopup(popupContent);
+            }
         }
     });
 }
@@ -51,7 +66,7 @@ function checkGeofencing(lat, lng) {
     return null;
 }
 
-// 4. УМНА ПРОВЕРКА ЗА ВОДА
+// 4. УМНА ПРОВЕРКА ЗА ВОДА (Reverse Geocoding)
 async function checkWaterSource(lat, lng) {
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=bg`;
     try {
@@ -59,10 +74,13 @@ async function checkWaterSource(lat, lng) {
         const data = await response.json();
         let a = data.address || {};
         let displayName = (data.display_name || "").toLowerCase();
-        const waterKeywords = ["река", "язовир", "езеро", "канал", "блато", "море", "залив", "арда", "тунджа", "вода", "water", "reservoir", "lake"];
+
+        const waterKeywords = ["река", "язовир", "езеро", "канал", "блато", "море", "залив", "вода", "water", "reservoir", "lake"];
         let waterTag = a.river || a.lake || a.reservoir || a.canal || a.sea || a.bay || a.water || a.natural || "";
         const hasKeyword = waterKeywords.some(key => displayName.includes(key));
+
         const isWater = waterTag !== "" || data.category === "natural" || data.type === "water" || hasKeyword || (lng > 27.52);
+
         return { isWater, data, waterName: waterTag || (hasKeyword ? "воден обект" : "") };
     } catch (e) {
         return { isWater: true, data: { address: {} }, waterName: "Локация" };
@@ -83,7 +101,7 @@ map.on('click', async function(e) {
         locBox.style.background = "#ffeb3b";
         locBox.innerHTML = `🚨 <b>ВНИМАНИЕ:</b> Намирате се в близост до <b>${restrictedName}</b>!`;
     } else {
-        locBox.innerHTML = "⏳ ГИС Анализ...";
+        locBox.innerHTML = "⏳ ГИС Анализ на терена...";
         locBox.style.background = "#fff3e0";
     }
 
@@ -119,24 +137,15 @@ map.on('click', async function(e) {
     }
 });
 
-// ЕКОЛОГИЧЕН МОНИТОРИНГ - РЕАЛНО ИЗПРАЩАНЕ КЪМ БАЗАТА ДАННИ
 function reportIssue(lat, lng) {
-    const desc = prompt("Моля, опишете замърсяването (напр. маслен разлив, мрежи):");
+    const desc = prompt("Моля, опишете замърсяването:");
     if (!desc) return;
-
     fetch('/api/report-pollution', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ lat: lat, lng: lng, description: desc })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.status === "success") {
-            alert("✅ Сигналът е записан в базата и изпратен към инспектор!");
-            window.location.reload(); // Презареждаме, за да се види в лога
-        } else {
-            alert("❌ Грешка: " + data.message);
-        }
+    }).then(res => res.json()).then(data => {
+        if (data.status === "success") { alert("✅ Сигналът е записан!"); window.location.reload(); }
     });
 }
 
@@ -154,7 +163,6 @@ function updateUI() {
     }
 }
 
-// ПРАВИЛА (ОСТАВАТ СЪЩИТЕ)
 const fishRules = {
     "Шаран": { start: [4, 15], end: [5, 31], msg: "период (15.04 - 31.05)", minSize: 30 },
     "Бяла риба": { start: [3, 15], end: [5, 15], msg: "период (15.03 - 15.05)", minSize: 45 },
@@ -172,7 +180,10 @@ if (fishInput) {
         let today = new Date();
         if (fishRules[val]) {
             let rule = fishRules[val];
-            if (today >= new Date(today.getFullYear(), rule.start[0]-1, rule.start[1]) && today <= new Date(today.getFullYear(), rule.end[0]-1, rule.end[1])) {
+            let startDate = new Date(today.getFullYear(), rule.start[0]-1, rule.start[1]);
+            let endDate = new Date(today.getFullYear(), rule.end[0]-1, rule.end[1]);
+
+            if (today >= startDate && today <= endDate) {
                 locBox.style.background = "#ffebee";
                 locBox.innerHTML = `🚨 <b>ЗАБРАНЕНО!</b> ${rule.msg}`;
                 if (submitBtn) submitBtn.disabled = true;

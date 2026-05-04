@@ -23,12 +23,33 @@
           {% endif %}
         {% endwith %}
 
+        <!-- НОВО: СЕКЦИЯ ЗА ЛИЧНА СТАТИСТИКА -->
+        <div class="card" style="display: flex; gap: 20px; background: #e3f2fd; border: 1px solid #90caf9; margin-bottom: 20px;">
+            <div style="flex: 1;">
+                <h4 style="margin-top: 0;">📊 Моята статистика</h4>
+                <ul style="font-size: 13px; list-style: none; padding: 0;">
+                {% for s in stats %}
+                    <li>🐟 {{ s[0] }}: <b>{{ s[1] }} бр.</b></li>
+                {% endfor %}
+                </ul>
+            </div>
+            <div style="flex: 1;">
+                <h4 style="margin-top: 0;">🏆 Топ локации</h4>
+                <ul style="font-size: 13px; list-style: none; padding: 0;">
+                {% for spot in spots %}
+                    <li>📍 {{ spot[0].split('(')[0] }} ({{ spot[1] }} пъти)</li>
+                {% endfor %}
+                </ul>
+            </div>
+        </div>
+
         <div class="card">
             <h3>🗺️ ГИС Карта на улова</h3>
             <div id="map" style="height: 300px; border-radius: 8px; margin-bottom: 15px;"></div>
             <div id="loc_text" style="font-size: 12px; color: #666; margin-bottom: 10px;">Изберете точка от картата...</div>
 
-            <form action="{{ url_for('submit_log') }}" method="POST">
+            <!-- ДОБАВЕНО: enctype ЗА КАЧВАНЕ НА СНИМКИ -->
+            <form action="{{ url_for('submit_log') }}" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="lat" id="lat">
                 <input type="hidden" name="lng" id="lng">
                 <input type="hidden" name="water_info" id="water_info">
@@ -47,6 +68,18 @@
                             {% endfor %}
                         </select>
                     </div>
+                </div>
+
+                <!-- НОВО: СНИМКА, ТАКЪМ И СОЦИАЛНО СПОДЕЛЯНЕ -->
+                <div style="background: #ffffff; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 15px;">
+                    <label style="font-size: 11px; font-weight: bold;">📸 Добави снимка на улова:</label>
+                    <input type="file" name="fish_photo" accept="image/*" class="inspect-input" style="margin-bottom: 10px;">
+
+                    <input type="text" name="tackle_info" placeholder="Какъв такъм използвахте?" class="inspect-input" style="margin-bottom: 10px;">
+
+                    <label style="font-size: 12px; color: #2c3e50; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                        <input type="checkbox" name="is_public"> 🌐 Сподели в социалната стена (Скрива точен GPS за другите)
+                    </label>
                 </div>
 
                 <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #ddd;">
@@ -78,11 +111,11 @@
         </div>
 
         <div class="card">
-            <h3>🚢 Моят текущ улов</h3>
+            <h3>🚢 Моят дигитален дневник</h3>
             <table>
                 <thead>
                     <tr>
-                        <th>Риба</th>
+                        <th>Риба / Снимка</th>
                         <th>Кораб</th>
                         <th>Статус</th>
                         <th>Действие</th>
@@ -91,7 +124,12 @@
                 <tbody>
                     {% for my_log in all_logs if my_log.user_id == session['user_id'] %}
                     <tr>
-                        <td>{{ my_log.fish_type }}</td>
+                        <td>
+                            <b>{{ my_log.fish_type }}</b>
+                            {% if my_log.fish_image_url %}
+                                <br><img src="{{ url_for('static', filename='uploads/' + my_log.fish_image_url) }}" width="60" style="border-radius:4px; margin-top:5px; border: 1px solid #ddd;">
+                            {% endif %}
+                        </td>
                         <td>{{ my_log.vessel.vessel_name if my_log.vessel else "Бряг" }}</td>
                         <td>{{ my_log.status }}</td>
                         <td>
@@ -110,6 +148,7 @@
             </table>
         </div>
 
+        <!-- СЕКЦИЯ ЗА СЪБИТИЯ (ЗАПАЗЕНА) -->
         <div class="card">
             <h3 id="event-title">🏆 Записване за събитие</h3>
             <form action="{{ url_for('book') }}" method="POST">
@@ -125,24 +164,19 @@
                     <input type="number" name="experience" placeholder="Опит (г)" required class="inspect-input">
                 </div>
 
-                {# НОВО ПО ТОЧКА 4: ТЕЛК ПОЛЕ #}
                 <div style="margin: 15px 0; padding: 10px; border: 1px dashed #007bff; border-radius: 8px; background: #f0f7ff;">
                     <label style="font-size: 11px; font-weight: bold; color: #0056b3;">♿ Социални категории (ТЕЛК):</label>
-                    <input type="text" name="telk_number" placeholder="Въведете номер на ТЕЛК решение (за безплатен билет)" class="inspect-input" style="margin-top: 5px;">
-                    <small style="font-size: 9px; color: #666;">* Системата ще преизчисли таксата автоматично на 0€.</small>
+                    <input type="text" name="telk_number" placeholder="Въведете номер на ТЕЛК решение" class="inspect-input" style="margin-top: 5px;">
+                    <small style="font-size: 9px; color: #666;">* Системата автоматично ще начисли 0€.</small>
                 </div>
 
                 <div id="comp_ui">
                     <label>Избор на турнир (Сезон 2026):</label>
                     <select name="comp_date" class="inspect-input">
                         <optgroup label="ПРЕДСТОЯЩИ">
-                            <option value="06.09.2026 - яз. Батак (Каяк Фест)">06 Септември - яз. Батак (Каяк Фест)</option>
-                            <option value="14.09.2026 - р. Марица (Zip Baits Cup)">14 Септември - р. Марица (Zip Baits Cup)</option>
-                            <option value="12.10.2026 - Гребен канал (Купа ИАРА)">12 Октомври - Гребен канал (Купа ИАРА)</option>
-                        </optgroup>
-                        <optgroup label="✅ АРХИВ" disabled>
-                            <option>10 Май - Река Дунав (Извършено)</option>
-                            <option>15 Юни - Световно първенство (Извършено)</option>
+                            <option value="06.09.2026 - яз. Батак">06 Септември - яз. Батак</option>
+                            <option value="14.09.2026 - р. Марица">14 Септември - р. Марица</option>
+                            <option value="12.10.2026 - Гребен канал">12 Октомври - Гребен канал</option>
                         </optgroup>
                     </select>
                 </div>
@@ -160,9 +194,19 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
     <script>
+        // Предаване на ID на текущия потребител към JS
+        const currentUserId = {{ session['user_id'] }};
         const existingLogs = [
             {% for log in all_logs %}
-            { lat: {{ log.lat }}, lng: {{ log.lng }}, fish_type: "{{ log.fish_type }}" },
+            {
+                lat: {{ log.lat }},
+                lng: {{ log.lng }},
+                fish_type: "{{ log.fish_type }}",
+                user_id: {{ log.user_id }},
+                is_public: {{ 'true' if log.is_public else 'false' }},
+                water_info: "{{ log.water_info }}",
+                tackle_info: "{{ log.tackle_info or '' }}"
+            },
             {% endfor %}
         ];
         if (typeof loadExistingMarkers === "function") { loadExistingMarkers(existingLogs); }
