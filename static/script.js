@@ -1,43 +1,88 @@
-var map = L.map('map').setView([42.50, 27.46], 7);
+// 1. ИНИЦИАЛИЗАЦИЯ НА КАРТАТА
+var map = L.map('map').setView([41.63, 25.45], 11); // Центрирано към яз. Студен кладенец
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors'
 }).addTo(map);
 
+// 2. ЗАРЕЖДАНЕ НА МАРКЕРИ (Запазено)
 function loadExistingMarkers(logs) {
+    if (!logs) return;
     logs.forEach(log => {
         if (log.lat && log.lng) {
+            const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${log.lat},${log.lng}`;
             L.marker([log.lat, log.lng]).addTo(map)
-                .bindPopup(`
-                    <div style="text-align:center;">
-                        <b style="color:#003366;">🐟 ${log.fish_type}</b><br>
-                        <small>${log.water_info}</small>
-                    </div>
-                `);
+                .bindPopup(`<b>🐟 ${log.fish_type}</b><br><small>${log.water_info}</small><br><a href="${navUrl}" target="_blank">🚗 Навигация</a>`);
         }
     });
 }
 
-map.on('click', function(e) {
+// 3. УМНА ФУНКЦИЯ ЗА ПРОВЕРКА НА ВОДА (С ДВОЕН ФИЛТЪР)
+async function checkWaterSource(lat, lng) {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=bg`;
+    try {
+        const response = await fetch(url, { headers: { 'User-Agent': 'IARA_Water_Validation_V9' } });
+        const data = await response.json();
+        let a = data.address || {};
+        let displayName = (data.display_name || "").toLowerCase();
+
+        // Списък с ключови думи за водоеми в България
+        const waterKeywords = ["река", "язовир", "езеро", "канал", "блато", "море", "залив", "арда", "студен кладенец", "кърджали", "вода", "water", "reservoir", "lake"];
+
+        let waterTag = a.river || a.lake || a.reservoir || a.canal || a.sea || a.bay || a.water || a.natural || "";
+        const hasKeyword = waterKeywords.some(key => displayName.includes(key));
+        const isWater = waterTag !== "" || data.category === "natural" || data.type === "water" || hasKeyword || (lng > 27.52);
+
+        return { isWater, data, waterName: waterTag || (hasKeyword ? "воден обект" : "") };
+    } catch (e) {
+        return { isWater: true, data: { address: {} }, waterName: "Координати" };
+    }
+}
+
+// 4. КЛИК ВЪРХУ КАРТАТА
+map.on('click', async function(e) {
     var lat = e.latlng.lat;
     var lng = e.latlng.lng;
+    let locBox = document.getElementById('loc_text');
+    let mainSubmitBtn = document.querySelector('button[type="submit"]');
 
-    fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`)
-    .then(res => res.json())
-    .then(data => {
-        let a = data.address;
-        let water = a.river || a.lake || a.water || a.sea || "водоем";
-        let info = `Място: ${water} в регион ${a.city || a.village || a.county || "България"}`;
+    locBox.innerHTML = "⏳ Проверка на водоема...";
+    locBox.style.background = "#fff3e0";
+
+    // Опит 1: Точно на мястото
+    let result = await checkWaterSource(lat, lng);
+
+    // Опит 2: Ако каже суша (като на снимката ти), пробваме с малко изместване
+    if (!result.isWater) {
+        result = await checkWaterSource(lat + 0.0004, lng + 0.0004);
+    }
+
+    if (!result.isWater) {
+        let place = result.data.address.city || result.data.address.village || result.data.address.town || "района";
+        locBox.style.background = "#ffebee";
+        locBox.innerHTML = `⚠️ <b>Суша:</b> В район ${place} не е открит водоем!`;
+        if (mainSubmitBtn) mainSubmitBtn.disabled = true;
+    } else {
+        let waterLabel = result.waterName || "Водоем";
+        let place = result.data.address.city || result.data.address.village || result.data.address.town || result.data.address.municipality || "България";
+
+        // Поправка на имената за Студен кладенец / Арда
+        if (result.data.display_name.toLowerCase().includes("студен кладенец")) waterLabel = "яз. Студен кладенец";
+        else if (result.data.display_name.toLowerCase().includes("арда")) waterLabel = "р. Арда";
+
+        let info = `📍 Място: ${waterLabel.charAt(0).toUpperCase() + waterLabel.slice(1)} (район ${place})`;
 
         document.getElementById('lat').value = lat;
         document.getElementById('lng').value = lng;
         document.getElementById('water_info').value = info;
 
-        let locBox = document.getElementById('loc_text');
-        locBox.innerText = info;
-    });
+        locBox.style.background = "#e7f3ff";
+        locBox.innerHTML = `<b>${info}</b><br><small>Координати: ${lat.toFixed(4)}, ${lng.toFixed(4)}</small>`;
+        if (mainSubmitBtn) mainSubmitBtn.disabled = false;
+    }
 });
 
+// 5. UI ПРЕВКЛЮЧВАНЕ (Запазено)
 function updateUI() {
     const category = document.getElementById('category').value;
     const compUI = document.getElementById('comp_ui');
@@ -45,25 +90,24 @@ function updateUI() {
     const eventTitle = document.getElementById('event-title');
 
     if (category === 'Competition') {
-        compUI.style.display = 'block';
-        socialUI.style.display = 'none';
-        eventTitle.innerHTML = '🏆 Записване за състезание';
-        eventTitle.style.color = '#003366'; // Тъмно синьо
+        if (compUI) compUI.style.display = 'block';
+        if (socialUI) socialUI.style.display = 'none';
+        if (eventTitle) eventTitle.innerHTML = '🏆 Записване за състезание';
     } else {
-        compUI.style.display = 'none';
-        socialUI.style.display = 'block';
-        eventTitle.innerHTML = '🤝 Улов с непознати';
-        eventTitle.style.color = '#28a745';
+        if (compUI) compUI.style.display = 'none';
+        if (socialUI) socialUI.style.display = 'block';
+        if (eventTitle) eventTitle.innerHTML = '🤝 Улов с непознати';
     }
 }
 
+// 6. ПРАВИЛА ЗА РИБИТЕ (Запазено)
 const fishRules = {
     "Шаран": { start: [4, 15], end: [5, 31], msg: "период (15.04 - 31.05)", minSize: 30 },
     "Бяла риба": { start: [3, 15], end: [5, 15], msg: "период (15.03 - 15.05)", minSize: 45 },
     "Щука": { start: [2, 1], end: [4, 30], msg: "период (01.02 - 30.04)", minSize: 35 },
     "Калкан": { start: [4, 15], end: [6, 15], msg: "период (15.04 - 15.06)", minSize: 45 },
-    "Есетра": { permanent: true, msg: "🚨 ЗАБРАНЕН ВИД! Пълна защита." },
-    "Моруна": { permanent: true, msg: "🚨 ЗАБРАНЕН ВИД! Пълна защита." }
+    "Есетра": { permanent: true, msg: "🚨 ЗАБРАНЕН ВИД!" },
+    "Моруна": { permanent: true, msg: "🚨 ЗАБРАНЕН ВИД!" }
 };
 
 const fishInput = document.querySelector('input[name="fish_type"]');
@@ -77,32 +121,28 @@ if (fishInput) {
 
         if (fishRules[val]) {
             let rule = fishRules[val];
-            if (rule.permanent) {
+            let startDate = new Date(today.getFullYear(), rule.start[0]-1, rule.start[1]);
+            let endDate = new Date(today.getFullYear(), rule.end[0]-1, rule.end[1]);
+
+            if (rule.permanent || (today >= startDate && today <= endDate)) {
                 locBox.style.background = "#ffebee";
-                locBox.innerHTML = rule.msg;
-                submitBtn.disabled = true;
+                locBox.innerHTML = `🚨 <b>ЗАБРАНЕНО!</b> ${rule.msg}`;
+                if (submitBtn) submitBtn.disabled = true;
             } else {
-                let startDate = new Date(today.getFullYear(), rule.start[0]-1, rule.start[1]);
-                let endDate = new Date(today.getFullYear(), rule.end[0]-1, rule.end[1]);
-                if (today >= startDate && today <= endDate) {
-                    locBox.style.background = "#ffebee";
-                    locBox.innerHTML = `🚨 ЗАБРАНЕНО! Размножителен ${rule.msg}`;
-                    submitBtn.disabled = true;
-                } else {
-                    locBox.style.background = "#fff3e0";
-                    locBox.innerHTML = `ℹ️ РАЗРЕШЕНО. Мин. размер: ${rule.minSize}см.`;
-                    submitBtn.disabled = false;
-                }
+                locBox.style.background = "#c8e6c9";
+                locBox.innerHTML = `✅ <b>${val}:</b> Разрешен. Мин. размер: ${rule.minSize} см.`;
+                if (submitBtn) submitBtn.disabled = false;
             }
-        } else {
-            locBox.style.background = "#e7f3ff";
-            submitBtn.disabled = false;
         }
     });
 }
 
-flatpickr("#weekend_picker", {
-    minDate: "today",
-    disable: [date => (date.getDay() !== 0 && date.getDay() !== 6)],
-    locale: "bg", dateFormat: "d.m.Y"
-});
+// 7. КАЛЕНДАР (Запазено)
+if (document.getElementById('weekend_picker')) {
+    flatpickr("#weekend_picker", {
+        minDate: "today",
+        disable: [date => (date.getDay() !== 0 && date.getDay() !== 6)],
+        locale: "bg",
+        dateFormat: "d.m.Y"
+    });
+}
