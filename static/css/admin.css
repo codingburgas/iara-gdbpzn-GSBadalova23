@@ -11,13 +11,17 @@
     min-width: 300px;
     max-width: 450px;
     text-align: center;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    padding: 15px;
+    border-radius: 12px;
 }
 
 .card label {
     display: block;
     font-size: 11px;
     font-weight: bold;
-    color: #666;
+    color: var(--text-secondary);
     margin-bottom: 2px;
 }
 
@@ -28,50 +32,61 @@ table {
 }
 
 th {
-    background: #003366;
+    background: var(--primary-color);
     color: white;
     padding: 14px;
     font-size: 13px;
+    text-align: left;
 }
 
 td {
     padding: 12px;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid var(--border-color);
     vertical-align: middle;
     font-size: 13px;
 }
 
-tr:hover { background-color: #f8f9fa; }
+tr:hover { background-color: rgba(0,0,0,0.01); }
+body.dark-theme tr:hover { background-color: rgba(255,255,255,0.01); }
 
-.badge-comp { background: #ff4d4d; color: white; padding: 5px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; }
-.badge-social { background: #28a745; color: white; padding: 5px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; }
-.status-at-sea { color: #007bff; font-weight: bold; }
-.status-landed { color: #28a745; font-weight: bold; }
-.delivery-id { font-family: 'Courier New', monospace; background: #eee; padding: 2px 6px; border-radius: 4px; font-weight: bold; color: #333; }
-.fine-badge { background: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 10px; border-radius: 8px; font-weight: bold; }
-.success-badge { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 10px; border-radius: 8px; font-weight: bold; }
+.badge-comp { background: var(--danger-color); color: white; padding: 5px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+.badge-social { background: var(--accent-color); color: white; padding: 5px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+.status-at-sea { color: var(--info-color); font-weight: bold; }
+.status-landed { color: var(--accent-color); font-weight: bold; }
+.delivery-id { font-family: 'Courier New', monospace; background: var(--border-color); padding: 2px 6px; border-radius: 4px; font-weight: bold; color: var(--text-color); }
+.fine-badge { background: rgba(245, 158, 11, 0.1); border: 1px solid var(--warning-color); color: var(--warning-color); padding: 10px; border-radius: 8px; font-weight: bold; }
+.success-badge { background: rgba(34, 197, 94, 0.1); border: 1px solid var(--accent-color); color: var(--accent-color); padding: 10px; border-radius: 8px; font-weight: bold; }
 
 .btn-inspect {
-    background: #dc3545;
+    background: var(--danger-color);
     color: white;
     border: none;
-    padding: 8px;
-    border-radius: 4px;
+    padding: 8px 12px;
+    border-radius: 6px;
     cursor: pointer;
     font-weight: bold;
     font-size: 11px;
-    transition: 0.2s;
+    transition: var(--transition);
 }
 
 .btn-inspect:hover { opacity: 0.9; transform: translateY(-1px); }
-.btn-ok { background: #28a745 !important; }
+.btn-inspect:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+.btn-ok { background: var(--accent-color) !important; }
 
 .inspect-input {
-    padding: 8px;
+    padding: 10px;
     font-size: 12px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    margin-bottom: 5px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    margin-bottom: 8px;
     width: 100%;
     box-sizing: border-box;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    transition: var(--transition);
+}
+
+.inspect-input:focus {
+    border-color: var(--primary-color);
+    outline: none;
 }

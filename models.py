@@ -13,6 +13,7 @@ class User(db.Model):
     logs = db.relationship('FishingLog', backref='fisher', lazy=True)
     vessels = db.relationship('FishingVessel', backref='owner', lazy=True)
     reports = db.relationship('PollutionReport', backref='reporter', lazy=True)
+    notifications = db.relationship('Notification', backref='user', lazy=True)
 
 class FishingVessel(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -76,6 +77,7 @@ class FishingLog(db.Model):
     fish_image_url = db.Column(db.String(500), nullable=True)
     tackle_info = db.Column(db.String(200), nullable=True)
     is_public = db.Column(db.Boolean, default=False)
+    likes = db.Column(db.Integer, default=0)
 
 class PollutionReport(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -85,3 +87,10 @@ class PollutionReport(db.Model):
     lng = db.Column(db.Float, nullable=False)
     report_date = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(50), default="Pending")
+
+class Notification(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    message = db.Column(db.String(500), nullable=False)
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

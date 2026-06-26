@@ -256,3 +256,60 @@ if (document.getElementById('weekend_picker')) {
         dateFormat: "d.m.Y"
     });
 }
+
+async function likeLog(logId, btnElement) {
+    if (btnElement.classList.contains('liked')) return;
+    try {
+        const response = await fetch(`/api/logs/${logId}/like`, { method: 'POST' });
+        const data = await response.json();
+        if (data.status === 'success') {
+            btnElement.classList.add('liked');
+            const countEl = btnElement.querySelector('.like-count');
+            if (countEl) {
+                countEl.textContent = data.likes;
+            }
+        }
+    } catch (e) {
+        console.error("Error liking log:", e);
+    }
+}
+
+// Проследяване на кораби в реално време на потребителската карта
+let userVesselMarkers = {};
+async function updateUserVesselPositions() {
+    if (typeof map === 'undefined' || !map) return;
+    try {
+        const res = await fetch('/api/vessels/positions');
+        const vessels = await res.json();
+        
+        vessels.forEach(v => {
+            const popupContent = `
+                <div style="text-align:center;">
+                    <b style="color:#0284c7;">🚢 ${v.vessel_name}</b><br>
+                    <small>Маркировка: ${v.marking}</small><br>
+                    <small>CFR: ${v.cfr}</small><br>
+                    <a href="https://www.google.com/maps/dir/?api=1&destination=${v.lat},${v.lng}" target="_blank" style="background:#28a745; color:white; padding:3px 6px; text-decoration:none; border-radius:4px; font-size:10px; display:inline-block; margin-top:5px;">🚗 Навигация</a>
+                </div>
+            `;
+            
+            if (userVesselMarkers[v.id]) {
+                userVesselMarkers[v.id].setLatLng([v.lat, v.lng]);
+            } else {
+                const shipIcon = L.divIcon({
+                    html: '<span style="font-size: 20px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">🚢</span>',
+                    className: 'ship-div-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+                userVesselMarkers[v.id] = L.marker([v.lat, v.lng], { icon: shipIcon }).addTo(map).bindPopup(popupContent);
+            }
+        });
+    } catch (err) {
+        console.error("Error loading vessels:", err);
+    }
+}
+
+if (document.getElementById('map')) {
+    updateUserVesselPositions();
+    setInterval(updateUserVesselPositions, 5000);
+}

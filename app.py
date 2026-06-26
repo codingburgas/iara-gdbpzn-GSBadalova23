@@ -1,6 +1,8 @@
 import os
+import math
+import time
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
-from models import db, User, Booking, FishingLog, FishingVessel, CommercialPermit, PollutionReport
+from models import db, User, Booking, FishingLog, FishingVessel, CommercialPermit, PollutionReport, Notification
 from sqlalchemy import func
 from datetime import datetime
 from werkzeug.utils import secure_filename
@@ -21,6 +23,18 @@ db.init_app(app)
 
 with app.app_context():
     db.create_all()
+    # Автоматична проверка и миграция за колоната 'likes'
+    from sqlalchemy import text, inspect
+    try:
+        inspector = inspect(db.engine)
+        columns = [c['name'] for c in inspector.get_columns('fishing_log')]
+        if 'likes' not in columns:
+            db.session.execute(text("ALTER TABLE fishing_log ADD COLUMN likes INTEGER DEFAULT 0"))
+            db.session.commit()
+            print("🚀 Автоматична миграция: Добавена е колона 'likes' в 'fishing_log'.")
+    except Exception as e:
+        db.session.rollback()
+        print("ℹ️ Автоматична миграция:", e)
 
 FISH_RULES = {
     "Есетра": "Критично застрашен вид! Уловът е абсолютно забранен (р. Дунав и Черно море).",
@@ -146,6 +160,14 @@ def resolve_report(report_id):
     report = PollutionReport.query.get(report_id)
     if report:
         report.status = 'Resolved'
+        
+        # Създаване на известие за потребителя
+        new_notif = Notification(
+            user_id=report.user_id,
+            message=f"📢 Вашият екологичен сигнал за замърсяване #{report.id} е проверен и статусът му е променен на ПРОВЕРЕН."
+        )
+        db.session.add(new_notif)
+        
         db.session.commit()
         flash('Сигналът е маркиран като проверен!', 'success')
     return redirect(url_for('dashboard'))
@@ -163,14 +185,23 @@ def add_vessel():
             length_overall=float(request.form.get('length', 0)),
             gross_tonnage=float(request.form.get('tonnage', 0)),
             engine_power=float(request.form.get('power', 0)),
-            owner_id=request.form.get('owner_id')
+            owner_id=int(request.form.get('owner_id'))
         )
         db.session.add(new_vessel)
+        db.session.flush() # Вземане на ID на кораба
+        
+        # Създаване на известие за корабособственика
+        new_notif = Notification(
+            user_id=new_vessel.owner_id,
+            message=f"🚢 Новият ви кораб '{new_vessel.vessel_name}' ({new_vessel.external_marking}) бе вписан в националния регистър."
+        )
+        db.session.add(new_notif)
+        
         db.session.commit()
         flash('Корабът е успешно вписан!', 'success')
-    except:
+    except Exception as e:
         db.session.rollback()
-        flash('Грешка при регистрация на кораб!', 'danger')
+        flash(f'Грешка при регистрация на кораб! {str(e)}', 'danger')
     return redirect(url_for('dashboard'))
 
 
@@ -181,16 +212,27 @@ def issue_permit():
         valid_date = datetime.strptime(request.form.get('valid_until'), '%Y-%m-%d')
         new_permit = CommercialPermit(
             permit_number=f"PERM-{uuid.uuid4().hex[:6].upper()}",
-            vessel_id=request.form.get('vessel_id'),
+            vessel_id=int(request.form.get('vessel_id')),
             allowed_gear=request.form.get('gear'),
             valid_until=valid_date
         )
         db.session.add(new_permit)
+        db.session.flush()
+        
+        # Създаване на известие за корабособственика
+        vessel = FishingVessel.query.get(new_permit.vessel_id)
+        if vessel:
+            new_notif = Notification(
+                user_id=vessel.owner_id,
+                message=f"📜 Издадено е ново разрешително {new_permit.permit_number} за кораб '{vessel.vessel_name}'."
+            )
+            db.session.add(new_notif)
+            
         db.session.commit()
         flash('Успешно издадено разрешително!', 'success')
-    except:
+    except Exception as e:
         db.session.rollback()
-        flash('Грешка при издаване на разрешително!', 'danger')
+        flash(f'Грешка при издаване на разрешително! {str(e)}', 'danger')
     return redirect(url_for('dashboard'))
 
 
@@ -303,9 +345,83 @@ def inspect(log_id):
                 log.is_legal = False if log.fine_amount > 0 else True
             except:
                 flash('Грешна сума!', 'danger')
+                return redirect(url_for('dashboard'))
+        
+        # Създаване на известие за потребителя
+        status_msg = "Маркиран като ИЗРЯДЕН" if log.is_legal else f"АКТ за {log.fine_amount} € ({log.inspection_note})"
+        new_notif = Notification(
+            user_id=log.user_id,
+            message=f"👮 Приключи инспекцията на вашия улов #{log.id} ({log.fish_type}). Статус: {status_msg}."
+        )
+        db.session.add(new_notif)
+        
         db.session.commit()
     return redirect(url_for('dashboard'))
 
+
+# --- СИМУЛИРАНО ДВИЖЕНИЕ НА КОРАБИТЕ ---
+def get_simulated_vessel_position(vessel_id, name):
+    t = time.time()
+    # Разделяне на корабите по Дунав и Черно море според ID
+    is_danube = (vessel_id % 2 == 0)
+    if is_danube:
+        # Локации около р. Дунав (Русе - Силистра)
+        # Lat ~43.8 до 44.1, Lng ~25.9 до 27.2
+        lat = 43.85 + 0.05 * math.sin(t / 60.0 + vessel_id)
+        lng = 25.95 + 0.3 * math.cos(t / 120.0 + vessel_id)
+    else:
+        # Локации в Черно море (Варна - Бургас)
+        # Lat ~42.3 до 43.3, Lng ~27.8 до 28.5
+        lat = 42.6 + 0.3 * math.sin(t / 80.0 + vessel_id)
+        lng = 27.9 + 0.25 * math.cos(t / 100.0 + vessel_id)
+    return lat, lng
+
+@app.route('/api/vessels/positions')
+def api_vessels_positions():
+    vessels = FishingVessel.query.filter_by(is_active=True).all()
+    positions = []
+    for v in vessels:
+        lat, lng = get_simulated_vessel_position(v.id, v.vessel_name)
+        positions.append({
+            "id": v.id,
+            "vessel_name": v.vessel_name,
+            "marking": v.external_marking,
+            "cfr": v.cfr_number,
+            "lat": lat,
+            "lng": lng
+        })
+    return jsonify(positions)
+
+# --- API ЗА ИЗВЕСТИЯ ---
+@app.route('/api/notifications', methods=['GET'])
+def api_notifications():
+    if 'user_id' not in session:
+        return jsonify([]), 401
+    notifs = Notification.query.filter_by(user_id=session['user_id']).order_by(Notification.created_at.desc()).limit(15).all()
+    return jsonify([{
+        "id": n.id,
+        "message": n.message,
+        "is_read": n.is_read,
+        "created_at": n.created_at.strftime('%d.%m.%Y %H:%M')
+    } for n in notifs])
+
+@app.route('/api/notifications/read', methods=['POST'])
+def api_notifications_read():
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    Notification.query.filter_by(user_id=session['user_id'], is_read=False).update({Notification.is_read: True})
+    db.session.commit()
+    return jsonify({"status": "success"})
+
+# --- API ЗА ХАРЕСВАНИЯ В СОЦИАЛНАТА СТЕНА ---
+@app.route('/api/logs/<int:log_id>/like', methods=['POST'])
+def api_like_log(log_id):
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    log = FishingLog.query.get_or_404(log_id)
+    log.likes += 1
+    db.session.commit()
+    return jsonify({"status": "success", "likes": log.likes})
 
 if __name__ == '__main__':
     app.run(debug=True)

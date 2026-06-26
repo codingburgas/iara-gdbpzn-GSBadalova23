@@ -1,7 +1,7 @@
 .hero-section {
     text-align: center;
     padding: 80px 20px;
-    background: linear-gradient(rgba(0, 51, 102, 0.85), rgba(0, 51, 102, 0.85)),
+    background: linear-gradient(rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.85)),
                 url('https://images.unsplash.com/photo-1544551763-47a0159c9636?auto=format&fit=crop&w=1350&q=80');
     background-size: cover;
     background-position: center;
@@ -20,15 +20,16 @@
 .auth-container {
     max-width: 400px;
     margin: 60px auto;
-    background: white;
+    background: var(--card-bg);
     padding: 40px;
     border-radius: 15px;
-    box-shadow: 0 15px 35px rgba(0,0,0,0.15);
-    border-top: 8px solid #003366;
+    box-shadow: var(--shadow-hover);
+    border-top: 8px solid var(--primary-color);
+    transition: var(--transition);
 }
 
 .auth-container h2 {
-    color: #003366;
+    color: var(--primary-color);
     text-align: center;
     margin-bottom: 25px;
     font-size: 1.8rem;
@@ -38,36 +39,54 @@
     width: 100%;
     padding: 14px;
     margin-bottom: 15px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     box-sizing: border-box;
     font-size: 1rem;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: var(--transition);
+}
+
+.auth-form input:focus {
+    border-color: var(--primary-color);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(58, 189, 248, 0.2);
 }
 
 .auth-form button {
     width: 100%;
     padding: 14px;
-    background: #003366;
+    background: var(--primary-color);
     color: white;
     border: none;
     border-radius: 8px;
     font-size: 1.1rem;
     font-weight: bold;
     cursor: pointer;
-    transition: background 0.3s ease;
+    transition: var(--transition);
 }
 
-.auth-form button:hover { background: #00509e; }
+.auth-form button:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+}
 
 .auth-footer {
     text-align: center;
     margin-top: 25px;
     font-size: 0.9rem;
-    color: #666;
+    color: var(--text-secondary);
 }
 
 .auth-footer a {
-    color: #003366;
+    color: var(--primary-color);
     text-decoration: none;
     font-weight: bold;
+    transition: var(--transition);
+}
+
+.auth-footer a:hover {
+    color: var(--primary-hover);
+    text-decoration: underline;
 }

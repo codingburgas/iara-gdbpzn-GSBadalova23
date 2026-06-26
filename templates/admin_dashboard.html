@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>🛡️ ИАРА - Администрация</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+    <script src="{{ url_for('static', filename='theme.js') }}"></script>
 </head>
 <body>
     <div class="nav">
@@ -39,7 +42,8 @@
         <!-- --- СЕКЦИЯ ЗА ЕКОЛОГИЧНИ СИГНАЛИ --- -->
         <div class="card" style="border-top: 5px solid #ff9800;">
             <h3>📢 Екологични сигнали и ГИС Мониторинг</h3>
-            <p style="font-size: 12px; color: #666;">Всички сигнали за замърсяване и нередности, подадени от мобилното приложение в реално време.</p>
+            <p style="font-size: 12px; color: var(--text-secondary);">Всички сигнали за замърсяване и нередности, подадени от мобилното приложение в реално време.</p>
+            <div id="admin-map" style="height: 350px; border-radius: 12px; margin-bottom: 20px; border: 3px solid var(--primary-color);"></div>
             <table>
                 <thead>
                     <tr style="background: #fff3e0;">
@@ -323,6 +327,83 @@
             fineRevenue: {{ logs|sum(attribute='fine_amount') or 0 }}
         };
         if (typeof initAdminCharts === "function") { initAdminCharts(statsData); }
+
+        // --- ГИС МОНИТОРИНГ И ПРОСЛЕДЯВАНЕ ЗА АДМИНИСТРАТОРИ ---
+        var adminMap = L.map('admin-map').setView([42.60, 25.20], 7);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(adminMap);
+
+        // Показване на екологични сигнали
+        const pollutionReports = [
+            {% for r in pollution_reports %}
+            {
+                id: {{ r.id }},
+                description: "{{ r.description }}",
+                lat: {{ r.lat }},
+                lng: {{ r.lng }},
+                status: "{{ r.status }}",
+                reporter: "{{ r.reporter.username if r.reporter else 'Анонимен' }}"
+            },
+            {% endfor %}
+        ];
+
+        pollutionReports.forEach(r => {
+            const isResolved = r.status === 'Resolved';
+            const markerColor = isResolved ? '#28a745' : '#ff9800';
+            const popupContent = `
+                <div style="text-align:center;">
+                    <b style="color:${markerColor};">📢 Сигнал за замърсяване #${r.id}</b><br>
+                    <b>Подател:</b> 👤 ${r.reporter}<br>
+                    <p style="font-size:11px; margin:5px 0;">${r.description}</p>
+                    <small>Статус: ${isResolved ? '✅ Проверен' : '⏳ Очаква проверка'}</small>
+                </div>
+            `;
+            L.circleMarker([r.lat, r.lng], {
+                radius: 8,
+                fillColor: markerColor,
+                color: '#000',
+                weight: 1.5,
+                fillOpacity: 0.8
+            }).addTo(adminMap).bindPopup(popupContent);
+        });
+
+        // Проследяване на кораби в реално време
+        let vesselMarkers = {};
+        async function updateVesselPositions() {
+            try {
+                const res = await fetch('/api/vessels/positions');
+                const vessels = await res.json();
+                
+                vessels.forEach(v => {
+                    const popupContent = `
+                        <div style="text-align:center;">
+                            <b style="color:#0284c7;">🚢 ${v.vessel_name}</b><br>
+                            <small>Маркировка: ${v.marking}</small><br>
+                            <small>CFR: ${v.cfr}</small><br>
+                            <a href="https://www.google.com/maps/dir/?api=1&destination=${v.lat},${v.lng}" target="_blank" style="background:#28a745; color:white; padding:3px 6px; text-decoration:none; border-radius:4px; font-size:10px; display:inline-block; margin-top:5px;">🚗 Навигация</a>
+                        </div>
+                    `;
+                    
+                    if (vesselMarkers[v.id]) {
+                        vesselMarkers[v.id].setLatLng([v.lat, v.lng]);
+                    } else {
+                        const shipIcon = L.divIcon({
+                            html: '<span style="font-size: 20px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">🚢</span>',
+                            className: 'ship-div-icon',
+                            iconSize: [24, 24],
+                            iconAnchor: [12, 12]
+                        });
+                        vesselMarkers[v.id] = L.marker([v.lat, v.lng], { icon: shipIcon }).addTo(adminMap).bindPopup(popupContent);
+                    }
+                });
+            } catch (err) {
+                console.error("Error loading vessels:", err);
+            }
+        }
+
+        updateVesselPositions();
+        setInterval(updateVesselPositions, 5000); // на всеки 5 секунди
     </script>
 </body>
 </html>

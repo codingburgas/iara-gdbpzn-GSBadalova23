@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/user.css') }}">
+    <script src="{{ url_for('static', filename='theme.js') }}"></script>
 </head>
 <body>
     <div class="nav">
@@ -146,6 +147,47 @@
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+
+        <!-- НОВО: СОЦИАЛНА СТЕНА -->
+        <div class="card">
+            <h3>🌐 Социална стена на риболовците</h3>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 20px;">
+                Вижте какво уловиха колегите в цяла България! Харесайте техните улови и споделяйте опит.
+            </p>
+            <div class="social-feed">
+                {% for log in all_logs if log.is_public %}
+                <div class="social-card">
+                    <div class="social-img-container">
+                        {% if log.fish_image_url %}
+                            <img src="{{ url_for('static', filename='uploads/' + log.fish_image_url) }}" class="social-img" alt="{{ log.fish_type }}">
+                        {% else %}
+                            <div class="social-placeholder-img">🐟</div>
+                        {% endif %}
+                    </div>
+                    <div class="social-content">
+                        <div class="social-user">
+                            👤 <b>{{ log.fisher.username if log.fisher else 'Анонимен' }}</b> • <small>{{ log.log_date.strftime('%d.%m.%Y') if log.log_date else 'Неизвестна дата' }}</small>
+                        </div>
+                        <div class="social-title">{{ log.fish_type }}</div>
+                        <div class="social-details">
+                            📍 Водоем: {{ log.water_info.split('(')[0] if log.water_info else 'Воден обект' }}<br>
+                            🎣 Такъм: {{ log.tackle_info or 'Стандартен' }}<br>
+                            ⚙️ Уред: {{ log.gear_used or 'Въдица' }}
+                        </div>
+                        <div class="social-footer">
+                            <button type="button" class="like-btn" onclick="likeLog({{ log.id }}, this)">
+                                <span>❤️</span> <b class="like-count">{{ log.likes or 0 }}</b>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div style="grid-column: 1/-1; text-align: center; color: var(--text-secondary); padding: 20px;">
+                    Все още няма споделени улови. Бъдете първия, който споделя!
+                </div>
+                {% endfor %}
+            </div>
         </div>
 
         <!-- СЕКЦИЯ ЗА СЪБИТИЯ (ЗАПАЗЕНА) -->

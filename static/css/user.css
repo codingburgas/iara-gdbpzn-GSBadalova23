@@ -2,10 +2,12 @@
     height: 480px;
     width: 100%;
     border-radius: 12px;
-    border: 3px solid #003366;
+    border: 3px solid var(--primary-color);
     margin-bottom: 15px;
     z-index: 1;
+    transition: var(--transition);
 }
+
 table {
     width: 100%;
     border-collapse: collapse;
@@ -13,16 +15,19 @@ table {
 }
 
 th, td {
-    padding: 12px;
+    padding: 14px 12px;
     text-align: left;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color);
 }
 
-th { color: #003366; font-weight: bold; }
+th {
+    color: var(--primary-color);
+    font-weight: bold;
+}
 
-/* Форми в потребителския панел */
+/* Forms and fields */
 .btn-submit {
-    background: #28a745;
+    background: var(--accent-color);
     color: white;
     font-weight: bold;
     cursor: pointer;
@@ -31,10 +36,20 @@ th { color: #003366; font-weight: bold; }
     border-radius: 8px;
     width: 100%;
     font-size: 1rem;
+    transition: var(--transition);
 }
 
-.btn-submit:hover { background: #218838; }
-.btn-submit:disabled { background: #ccc; cursor: not-allowed; }
+.btn-submit:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+}
+
+.btn-submit:disabled {
+    background: var(--border-color);
+    color: var(--text-secondary);
+    cursor: not-allowed;
+    transform: none;
+}
 
 #loc_text {
     margin-bottom: 15px;
@@ -42,16 +57,133 @@ th { color: #003366; font-weight: bold; }
     border-radius: 8px;
     font-size: 0.95rem;
     font-weight: bold;
-    background: #e7f3ff;
-    color: #003366;
-    border-left: 5px solid #003366;
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--primary-color);
+    border-left: 5px solid var(--primary-color);
+    transition: var(--transition);
 }
 
-input[type="text"], input[type="number"], input[type="email"], select {
+input[type="text"], input[type="number"], input[type="email"], select, input[type="datetime-local"], input[type="file"], input[type="date"] {
     width: 100%;
     padding: 12px;
     margin: 8px 0;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
     border-radius: 8px;
+    background-color: var(--card-bg);
+    color: var(--text-color);
     box-sizing: border-box;
+    transition: var(--transition);
+}
+
+input:focus, select:focus {
+    border-color: var(--primary-color);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(58, 189, 248, 0.2);
+}
+
+/* Social wall and catch feed */
+.social-feed {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.social-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: var(--transition);
+}
+
+.social-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-hover);
+}
+
+.social-img-container {
+    height: 180px;
+    background-color: #f1f5f9;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+body.dark-theme .social-img-container {
+    background-color: #0f172a;
+}
+
+.social-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.social-placeholder-img {
+    font-size: 3rem;
+    opacity: 0.5;
+}
+
+.social-content {
+    padding: 15px;
+}
+
+.social-user {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.social-title {
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin: 5px 0;
+}
+
+.social-details {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}
+
+.social-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--border-color);
+    padding-top: 10px;
+}
+
+.like-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    transition: var(--transition);
+}
+
+.like-btn:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger-color);
+}
+
+.like-btn.liked {
+    color: var(--danger-color);
+    animation: heartBeat 0.3s ease-out;
+}
+
+@keyframes heartBeat {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
 }
