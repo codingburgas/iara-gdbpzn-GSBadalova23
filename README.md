@@ -1,81 +1,105 @@
-# Smart IARA - Digital Fishery Management & Inspection System
+Smart IARA Management System
 
-Smart IARA is a comprehensive web-based platform designed to modernize and digitize fishery management, catch reporting, and inspection workflows in compliance with national and European regulations (EAFA / ИАРА). The system features dual-role workflows tailored for fishermen (digital logbooks, permit checks, social fishing calendars) and inspectors (violation tracking, fleet registry, real-time analytics).
+This document describes the OTJ project for the digital fishery and inspection tracking platform.
+1. Assignment Goals
 
-## 🚀 Key Features
+The Smart IARA system is a platform that allows authorized fishermen to manage their digital logbooks, check permits, and register catches, while providing inspectors with tools to track violations and monitor the fishing fleet. The system stores detailed information on all national water bodies, available fish species (with their biological restrictions), and registered commercial vessels. Inspectors can query data, perform on-site checks, evaluate real-time analytics dashboards, and issue fines electronically.
 
-### 👤 User Authentication & Role Management
-* **Secure Auth:** Session-based user registration and login with encrypted passwords managed via `signup.html` and `login.html`.
-* **RBAC (Role-Based Access Control):** Clear division between standard fishermen profiles (`user_dashboard.html`) and high-privilege administrative accounts (`admin_dashboard.html`).
+## 2. Expectations from the interviewee
 
-### 🗺️ GIS Module & Location Verification
-* **Interactive Map:** Built with **Leaflet.js** and **OpenStreetMap** inside `script.js` for effortless catch location pinpointing.
-* **Water-Only Validation:** Integrated **Nominatim API** for reverse geocoding to automatically reject false entries pinned on land.
-* **Navigation Logic:** Direct routing via Google Maps links for inspector patrol logistics.
+Numerous components are present in a typical fishery reporting system, each with specific constraints and requirements placed on them. The following provides an overview of some of the main expectations that the interviewer will want to hear you discuss in more detail during the interview.
 
-### 📅 Social Fishing & Biological Restrictions
-* **Smart Calendar:** Uses **Flatpickr** with custom logic to automatically restrict social fishing event scheduling exclusively to weekends.
-* **Real-Time Species Validation:** Client-side JavaScript assistant that cross-references inputs against official biological restrictions (minimum size limits and active seasonal breeding bans), visually alerting users before submission.
+### 2.1. Coordinate and Location Verification
+Selecting a location on the map is an essential part of the catch reporting module. The system has to make sure that people register entries validly:
+* How will the system make sure that coordinates do not fall on land?
+* Will there be an external API integration (e.g., Nominatim Reverse Geocoding) to validate water bodies?
+* How does the system handle map pinpointing responsiveness on mobile devices?
 
-### 🎣 Electronic Reporting System (ERS) & Traceability
-* **Traceability Passports:** Automated generation of unique alphanumeric delivery codes (`uuid`) upon fish disembarkation.
-* **Gear Tracking:** Detailed reporting logs for fishing gear parameters, including specific gear types (nets, longlines, trawls) and active operational time underwater.
+### 2.2. Validation and Assistant Logic
+One of the most significant attributes of the application is preventing illegal fishing records automatically:
+* How are seasonal breeding bans and minimum size limits cross-referenced in real time?
+* Does the client-side UI guide the user dynamically with visual alerts (e.g., turning fields red) before data submission?
 
-### 🚢 National Fishing Vessel Registry
-* **Fleet Monitoring:** Comprehensive vessel database tracking European **CFR codes**, external markings, gross tonnage, and engine power.
-* **Permit Validity Engine:** Backend property decorators calculating permit expiry dates in real time, automatically flagging invalid or expired documents.
+### 2.3. Administrative Privileges and Security
+The access structure needs to be strictly secured based on roles:
+* How will the system differentiate standard fishermen from high-privilege inspectors?
+* Are there custom backend decorators implemented to secure sensitive data routes (like fine registries)?
 
-### 📊 Inspector Panel & Data Analytics
-* **Fine Management:** Electronic violation logging with precise description fields and fine amount calculations.
-* **Interactive Dashboard:** Dynamic data visualization utilizing **Chart.js** via `admin_charts.js` to display real-time catch statistics, species distribution, and high-activity regional hotspots.
-* **Multimedia Evidence:** Secure file upload module allowing fishermen to attach photos of their catch as visual proof, managed with safe UUID filename mapping into the `uploads/` directory.
-
----
-
-## 🛠️ Tech Stack
-
-* **Backend:** Python 3.x, Flask (Microframework)
-* **Database & ORM:** SQLite, SQLAlchemy
-* **Frontend:** HTML5, CSS3 (Flexbox/Grid architecture), Vanilla JavaScript
-* **GIS & Libraries:** Leaflet.js, OpenStreetMap, Flatpickr, Chart.js
-* **APIs:** Nominatim OpenStreetMap API
+### 2.4. Data Analytics and Concurrency
+There will be massive amounts of logs and statistics handled by the database layer:
+* How are the catch data streams aggregated into structural formats (JSON) to feed interactive charts?
+* How does the system ensure transaction safety and robust error handling (`try-except` blocks) to prevent database damage or crashes during data synchronization?
 
 ---
 
-## 📂 Architecture & File Structure
+## 3. Requirements for the Smart IARA System
 
-Based on the actual project layout shown in `image_fd5cd6.png`, `image_fd5d33.png`, and `image_fd5d73.png`, the system strictly follows a modular pattern separating assets, templates, and core data layers:
+The following are the requirements that have been successfully implemented across the development stages:
+
+### Stage One
+* **R1:** There exist multiple database instances tracking user profiles (`User`), separating administrative accounts from standard fishing roles.
+* **R2:** Modern codebase structure following a clean **MVC-like modular separation** where schemas reside in `models.py` and application routing is handled within `app.py`.
+* **R3:** Interactive **MapViewer** module built using **Leaflet.js** and **OpenStreetMap** inside `script.js` to extract precise `lat` and `lng` coordinates automatically.
+* **R4:** Detailed system technical documentation provided directly within the `README.md` markdown file.
+
+### Stage Two
+* **R5:** Dynamic scheduling component utilizing **Flatpickr** with custom JavaScript filters to automatically restrict social fishing events exclusively to weekends.
+* **R6:** Fully responsive interface styled through clean, modular external style sheets (`base.css`, `index.css`, `user.css`, and `admin.css`) to ensure compatibility with mobile deployment on the field.
+* **R7:** Smart client-side input validation assistant acting as a real-time regulatory filter against illegal fishing entries.
+
+### Stage Three
+* **R8:** **Electronic Reporting System (ERS)** infrastructure managing unique alphanumeric traceability delivery codes generated via `uuid`.
+* **R9:** Specialized **Inspection Module** enabling authorized personnel to log violations, add descriptive operational notes, and manage fine allocations (`fine_amount`).
+* **R10:** Dynamic analytical dashboard running on **Chart.js** (`admin_charts.js`) that renders visual catch distributions and statistical activity maps based on live JSON endpoints.
+* **R11:** Advanced biological knowledge registry tracking legal size constraints and breeding season calendars for key fish species.
+
+### Stage Four
+* **R12:** National **Fishing Vessel Registry** implementing the `FishingVessel` data model to record technical vessel attributes: European **CFR codes**, external marking tags, tonnage, and engine power parameters.
+* **R13:** Automated automated permit validity tracking logic utilizing backend property decorators to monitor expiration timelines (`valid_until`) in real time.
+* **R14:** Deployment of dedicated utility tools such as `migrate_db.py` to seamlessly seed database configurations and manage active system schema adjustments.
+
+### Stage Five
+* **R15:** Advanced **GIS Verification Engine** integrating the **Nominatim Reverse Geocoding API** to cross-reference location pins and block entries recorded outside legal water bodies.
+* **R16:** Multimedia evidence module supporting file uploads into the secure `uploads/` path, mapping catch photos securely with randomized UUID keys.
+* **R17:** Automated route-mapping generation providing instant Google Maps redirection links for active inspector patrol logistics.
+* **R18:** Comprehensive **Error Handling layer** enforcing secure `try-except` wrappers across critical controllers to ensure deep system resilience, custom theme scripts (`theme.js`), and fault-tolerant operation under heavy load.
+
+---
+
+## 4. Project Structure
+
+The operational layout of the system directory is configured as follows:
 
 ```text
 iara-gdbpzn-GSBadalova23/
 │
-├── .venv/                  # Python Virtual Environment
+├── .venv/                  # Virtual Environment
 │
-├── instance/               # Database instances tracker
+├── instance/               # Database Storage Area
 │   ├── iara_pro.db
 │   ├── iara_pro_v2.db
 │   ├── iara_pro_v3.db
-│   └── iara_system.db      # Core operational database
+│   └── iara_system.db      # Main operational database
 │
 ├── static/                 # Static Assets
 │   ├── css/
-│   │   ├── admin.css       # Inspector panel styles
-│   │   ├── base.css        # Global CSS resets and typography
-│   │   ├── index.css       # Landing page styling
-│   │   └── user.css        # Fisherman dashboard design
-│   ├── uploads/            # Secure directory for catch photo storage
-│   ├── admin_charts.js     # Chart.js analytical aggregations
-│   ├── script.js           # Leaflet map logic and validation handlers
-│   └── theme.js            # Dynamic UI theme customization script
+│   │   ├── admin.css       # Administrative layout styles
+│   │   ├── base.css        # Global CSS layout and resets
+│   │   ├── index.css       # Public landing portal design
+│   │   └── user.css        # Fishermen workspace styling
+│   ├── uploads/            # Secure directory for photo evidence storage
+│   ├── admin_charts.js     # Analytics charting engine
+│   ├── script.js           # Leaflet Map tracking & validation handlers
+│   └── theme.js            # Dynamic interface theme control
 │
-├── templates/              # Jinja2 HTML Templates
-│   ├── admin_dashboard.html# Inspector control center
-│   ├── index.html          # Public landing portal
-│   ├── login.html          # Authorization interface
-│   ├── signup.html         # User registration interface
-│   └── user_dashboard.html # Electronic logbook for fishermen
+├── templates/              # Jinja2 Templates
+│   ├── admin_dashboard.html# Control center for inspectors
+│   ├── index.html          # Public landing interface
+│   ├── login.html          # Secure login form
+│   ├── signup.html         # Secure registration form
+│   └── user_dashboard.html # Electronic logbook workspace
 │
-├── app.py                  # Core application logic, routing, and endpoints
-├── migrate_db.py           # Database migration and seed management script
-├── models.py               # SQLAlchemy database schemas (User, Vessel, Catch Logs)
-└── README.md               # System documentation
+├── app.py                  # Server configuration, controller paths, and endpoints
+├── migrate_db.py           # Database environment migration script
+├── models.py               # Database schemas and data layers
+└── README.md               # System Documentation
